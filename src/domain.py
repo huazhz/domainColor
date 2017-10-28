@@ -348,12 +348,11 @@ def getMedian(half, red, green, blue):
 	return [rMedian, gMedian, bMedian];
 
 
-def makePlots(f):
+def makeSeparetedPlot(f):
 	inFile = open(f, "r",newline='');
 	reader = csv.reader(inFile);
 	#plt.close('all');
-	#f, axarr = plt.subplots(3, 3);
-	fig, ax = plt.subplots();	
+	#f, axarr = plt.subplots(3, 3);		
 	first = True;
 	second = True;
 	t1 = "R";
@@ -379,29 +378,27 @@ def makePlots(f):
 			if(row[0].endswith("V(MODE) ")):
 				t1 = "H";
 				t2 = "S";
-				t3 = "V";
-			#configAxarr(axarr, t1, t2, t3);
+				t3 = "V";			
 		else:			
 			item = row[0].split(";");
 			if(second):
 				second = False;
 				group.append(item[0]);
 				file.append(item[1]);
-				c1Ava.append(item[2]);
-				c2Ava.append(item[3]);
-				c3Ava.append(item[4]);
-				c1Median.append(item[5]);
-				c2Median.append(item[6]);
-				c3Median.append(item[7]);
-				c1Mode.append(item[8]);
-				c2Mode.append(item[9]);
-				c3Mode.append(item[10]);
+				c1Ava.append(int(item[2]));
+				c2Ava.append(int(item[3]));
+				c3Ava.append(int(item[4]));
+				c1Median.append(int(item[5]));
+				c2Median.append(int(item[6]));
+				c3Median.append(int(item[7]));
+				c1Mode.append(int(item[8]));
+				c2Mode.append(int(item[9]));
+				c3Mode.append(int(item[10]));
 				x.append(cont);
 				cont+=1;
 			#new group to plot, so plot the actual before
-			if(group[-1] != item[0]):
+			elif(group[-1] != item[0]):
 				qtdGroup.append(cont);
-				file.append(item[1]);				
 				group.append(item[0]);
 				file.append(item[1]);
 				c1Ava.append(int(item[2]));
@@ -427,84 +424,56 @@ def makePlots(f):
 				c2Mode.append(int(item[9]));
 				c3Mode.append(int(item[10]));
 				x.append(cont);
-				cont+=1;
-	
+				cont+=1;	
 	qtdGroup.append(cont);	
-	a = qtdGroup[0];
-	b = qtdGroup[1];
-	c = qtdGroup[2];
+	a = qtdGroup[0];#1: 0 	 - 149
+	b = qtdGroup[1];#2: 150 - 299
+	c = qtdGroup[2];#3: 300 - 499
 	
-	#plot per plot	
-	plt.title(t1+"(Avarage)x Sample");
-	plt.xlabel("Sample");
-	plt.ylabel(t1);
-	ax.scatter(x[0:a], c1Ava[0:a], label = group[0]);	
-	ax.scatter(x[a:b], c1Ava[a:b], label = group[1]);
-	ax.scatter(x[b:c], c1Ava[b:c], label = group[2]);
-	print(c1Ava)
+	resp = input("save it?(y/n): ");
 	
-	#ax.xaxis.set_major_locator(ticker.MultipleLocator(50));
-	#ax.yaxis.set_major_locator(ticker.MultipleLocator(50));	
-	plt.plot([-100, 600], [0,0], color='k');
-	plt.plot([-100, 600], [100,100], color='k');
-	plt.plot([-100, 600], [200,200], color='k');
-	plt.plot([-100, 600], [256,256], color='k');
-	plt.axis([-50, 550, 0, 300])
-	plt.legend();
-	#plt.grid(True)
-	plt.show();
-	
-	'''
-	plotOnlyOne(t1+"(Avarage)x Sample", "Sample", t1, group[0], x[:a], c1Ava[:a], ax);
-	plotOnlyOne(t1+"(Avarage)x Sample", "Sample", t1, group[1], x[a:b], c1Ava[a:b], ax);
-	plotOnlyOne(t1+"(Avarage)x Sample", "Sample", t1, group[2], x[b:c], c1Ava[b:c], ax);	
-	'''
-	
-	'''
-	#input("Press [enter] to continue.");
-	plt.title(t2+"(Avarage)x Sample");
-	plt.xlabel("Sample");
-	plt.ylabel(t2);
-	ax.scatter(x[:a], c2Ava[:a], label = group[0]);	
-	ax.scatter(x[a:b], c2Ava[a:b], label = group[1]);
-	ax.scatter(x[b:c], c2Ava[b:c], label = group[2]);
-	plt.legend();
- 
-	plt.grid(True, which='both')
-	plt.show();
-	'''
-	'''	
-	plotOnlyOne(t2+"(Avarage)x Sample", "Sample", t2, group[0], x[:a], c2Ava[:a], ax);	
-	plotOnlyOne(t3+"(Avarage)x Sample", "Sample", t3, group[0], x[:a], c3Ava[:a], ax);
-	input("Press [enter] to continue.")	
-	plt.show();			
-	
-	
-	plotOnlyOne(t1+"(Median)x Sample", "Sample", t1, group[1], x[a:b], c1Median[a:b], ax);
-	plotOnlyOne(t2+"(Median)x Sample", "Sample", t2, group[1], x[a:b], c2Median[a:b], ax);
-	plotOnlyOne(t3+"(Median)x Sample", "Sample", t3, group[1], x[a:b], c3Median[a:b], ax);
-	input("Press [enter] to continue.")	
-	plt.show();			
-	
-	
-	plotOnlyOne(t1+"(Mode)x Sample", "Sample", t1, group[2], x[b:c], c1Mode[b:c], ax);
-	plotOnlyOne(t2+"(Mode)x Sample", "Sample", t2, group[2], x[b:c], c2Mode[b:c], ax);
-	plotOnlyOne(t3+"(Mode)x Sample", "Sample", t3, group[2], x[b:c], c3Mode[b:c], ax);
-	plt.show();	
-	'''	
+	#AVARAGES
+	#c1(Avarage)
+	plotOneByOne(t1+"(Avarage) x Sample", "Sample", t1, group, x, c1Ava, a, b, c, resp);
+	#c2(Avarage)
+	plotOneByOne(t2+"(Avarage) x Sample", "Sample", t2, group, x, c2Ava, a, b, c, resp);
+	#c3(Avarage)
+	plotOneByOne(t3+"(Avarage) x Sample", "Sample", t3, group, x, c3Ava, a, b, c, resp);	
+	#MEDIAN
+	#c1(Median)
+	plotOneByOne(t1+"(Median) x Sample", "Sample", t1, group, x, c1Median, a, b, c, resp);
+	#c2(Median)
+	plotOneByOne(t2+"(Median) x Sample", "Sample", t2, group, x, c2Median, a, b, c, resp);
+	#c3(Median)
+	plotOneByOne(t3+"(Median) x Sample", "Sample", t3, group, x, c3Median, a, b, c, resp);	
+	#MODE
+	#c1(Mode)
+	plotOneByOne(t1+"(Mode) x Sample", "Sample", t1, group, x, c1Mode, a, b, c, resp);
+	#c2(Mode)
+	plotOneByOne(t2+"(Mode) x Sample", "Sample", t2, group, x, c2Mode, a, b, c, resp);
+	#c3(Mode)
+	plotOneByOne(t3+"(Mode) x Sample", "Sample", t3, group, x, c3Mode, a, b, c, resp);
 				
-	
 	inFile.close();
+		
 	
-	
-	
-def plotOnlyOne(title, xTitle, yTitle, group, x, y, ax):
+def plotOneByOne(title, xTitle, yTitle, group, x, y, a, b, c, resp):
+	fig, ax = plt.subplots();
 	plt.title(title);
 	plt.xlabel(xTitle);
-	plt.ylabel(xTitle);
-	ax.scatter(x, y, label = group);	
+	plt.ylabel(yTitle);
+	ax.scatter(x[0:a-1], y[0:a-1], label = group[0]);	
+	ax.scatter(x[a:b-1], y[a:b-1], label = group[1]);
+	ax.scatter(x[b:c-1], y[b:c-1], label = group[2]);	
+	plt.legend();
+	plt.grid(True);
+	fig.set_size_inches(14,6)
+	if(resp == "y"):		
+		plt.savefig("..\\plots\\"+title);	
+	#plt.show();
+	plt.close();
 
-'''
+
 def makePlots(f):
 	inFile = open(f, "r",newline='');
 	reader = csv.reader(inFile);
@@ -512,10 +481,12 @@ def makePlots(f):
 	f, axarr = plt.subplots(3, 3);
 	first = True;
 	second = True;
-	t1 = "H";
-	t2 = "S";
-	t3 = "V";
-	group = "";
+	t1 = "R";
+	t2 = "G";
+	t3 = "B";
+	name = "ALL_PLOTS_RGB";
+	qtdGroup = [];
+	group = [];
 	file = [];
 	c1Ava = [];
 	c2Ava = [];
@@ -535,50 +506,29 @@ def makePlots(f):
 				t1 = "H";
 				t2 = "S";
 				t3 = "V";
+				name = "ALL_PLOTS_HSV";
 			configAxarr(axarr, t1, t2, t3);
 		else:			
 			item = row[0].split(";");
 			if(second):
 				second = False;
-				group = item[0];
+				group.append(item[0]);
 				file.append(item[1]);
-				c1Ava.append(item[2]);
-				c2Ava.append(item[3]);
-				c3Ava.append(item[4]);
-				c1Median.append(item[5]);
-				c2Median.append(item[6]);
-				c3Median.append(item[7]);
-				c1Mode.append(item[8]);
-				c2Mode.append(item[9]);
-				c3Mode.append(item[10]);
+				c1Ava.append(int(item[2]));
+				c2Ava.append(int(item[3]));
+				c3Ava.append(int(item[4]));
+				c1Median.append(int(item[5]));
+				c2Median.append(int(item[6]));
+				c3Median.append(int(item[7]));
+				c1Mode.append(int(item[8]));
+				c2Mode.append(int(item[9]));
+				c3Mode.append(int(item[10]));
 				x.append(cont);
 				cont+=1;
 			#new group to plot, so plot the actual before
-			if(group != item[0]):
-				print("size of c1 ",len(c1Ava))
-				print("size of x ", len(x))
-				print("x is ", x)
-				axarr[0, 0].scatter(c1Ava, x, label = group);
-				axarr[0, 1].scatter(c2Ava, x, label = group);
-				axarr[0, 2].scatter(c3Ava, x, label = group);
-				axarr[1, 0].scatter(c1Median, x, label = group);
-				axarr[1, 1].scatter(c2Median, x, label = group);
-				axarr[1, 2].scatter(c3Median, x, label = group);
-				axarr[2, 0].scatter(c1Mode, x, label = group);
-				axarr[2, 1].scatter(c2Mode, x, label = group);
-				axarr[2, 2].scatter(c3Mode, x, label = group);
-				file.append(item[1]);
-				c1Ava = [];
-				c2Ava = [];
-				c3Ava = [];
-				c1Median = [];
-				c2Median = [];
-				c3Median = [];
-				c1Mode = [];
-				c2Mode = [];
-				c3Mode = [];
-				x = [];
-				group = item[0];
+			elif(group[-1] != item[0]):
+				qtdGroup.append(cont);
+				group.append(item[0]);
 				file.append(item[1]);
 				c1Ava.append(int(item[2]));
 				c2Ava.append(int(item[3]));
@@ -603,49 +553,120 @@ def makePlots(f):
 				c2Mode.append(int(item[9]));
 				c3Mode.append(int(item[10]));
 				x.append(cont);
-				cont+=1;		
-	axarr[0, 0].legend();
-	plt.show();			
+				cont+=1;	
+	qtdGroup.append(cont);
+	
+	a = qtdGroup[0];#1: 0 	 - 149
+	b = qtdGroup[1];#2: 150 - 299
+	c = qtdGroup[2];#3: 300 - 499
+	
+	resp = input("save it?(y/n): ");
+	
+	plotAxarr(f, axarr, x, c1Ava, c2Ava, c3Ava, c1Median, c2Median, c3Median,
+			c1Mode, c2Mode, c3Mode, a, b, c, group, resp, name);
+				
 	inFile.close();
-'''
+
+def plotAxarr(f, axarr,x, c1Ava, c2Ava, c3Ava, c1Median, c2Median, c3Median,
+			c1Mode, c2Mode, c3Mode, a, b, c, group, resp, name):
+	#AVARAGE
+	#c1Ava
+	axarr[0, 0].scatter(x[0:a-1], c1Ava[0:a-1], label = group[0]);
+	axarr[0, 0].scatter(x[a:b-1], c1Ava[a:b-1], label = group[1]);
+	axarr[0, 0].scatter(x[b:c-1], c1Ava[b:c-1], label = group[2]);
+	axarr[0, 0].legend();
+	#c2Ava
+	axarr[0, 1].scatter(x[0:a-1], c2Ava[0:a-1], label = group[0]);
+	axarr[0, 1].scatter(x[a:b-1], c2Ava[a:b-1], label = group[1]);
+	axarr[0, 1].scatter(x[b:c-1], c2Ava[b:c-1], label = group[2]);
+	axarr[0, 1].legend();
+	#c3Ava
+	axarr[0, 2].scatter(x[0:a-1], c3Ava[0:a-1], label = group[0]);
+	axarr[0, 2].scatter(x[a:b-1], c3Ava[a:b-1], label = group[1]);
+	axarr[0, 2].scatter(x[b:c-1], c3Ava[b:c-1], label = group[2]);
+	axarr[0, 2].legend();
+	
+	#MEDIAN
+	#c1Median
+	axarr[1, 0].scatter(x[0:a-1], c1Median[0:a-1], label = group[0]);
+	axarr[1, 0].scatter(x[a:b-1], c1Median[a:b-1], label = group[1]);
+	axarr[1, 0].scatter(x[b:c-1], c1Median[b:c-1], label = group[2]);
+	axarr[1, 0].legend();
+	#c2Median
+	axarr[1, 1].scatter(x[0:a-1], c2Median[0:a-1], label = group[0]);
+	axarr[1, 1].scatter(x[a:b-1], c2Median[a:b-1], label = group[1]);
+	axarr[1, 1].scatter(x[b:c-1], c2Median[b:c-1], label = group[2]);
+	axarr[1, 1].legend();
+	#c3Median
+	axarr[1, 2].scatter(x[0:a-1], c3Median[0:a-1], label = group[0]);
+	axarr[1, 2].scatter(x[a:b-1], c3Median[a:b-1], label = group[1]);
+	axarr[1, 2].scatter(x[b:c-1], c3Median[b:c-1], label = group[2]);
+	axarr[1, 2].legend();
+	
+	#MODE
+	#c1Mode
+	axarr[2, 0].scatter(x[0:a-1], c1Mode[0:a-1], label = group[0]);
+	axarr[2, 0].scatter(x[a:b-1], c1Mode[a:b-1], label = group[1]);
+	axarr[2, 0].scatter(x[b:c-1], c1Mode[b:c-1], label = group[2]);
+	axarr[2, 0].legend();
+	#c2Mode
+	axarr[2, 1].scatter(x[0:a-1], c2Mode[0:a-1], label = group[0]);
+	axarr[2, 1].scatter(x[a:b-1], c2Mode[a:b-1], label = group[1]);
+	axarr[2, 1].scatter(x[b:c-1], c2Mode[b:c-1], label = group[2]);
+	axarr[2, 1].legend();
+	#c3Mode
+	axarr[2, 2].scatter(x[0:a-1], c3Mode[0:a-1], label = group[0]);
+	axarr[2, 2].scatter(x[a:b-1], c3Mode[a:b-1], label = group[1]);
+	axarr[2, 2].scatter(x[b:c-1], c3Mode[b:c-1], label = group[2]);
+	axarr[2, 2].legend();
+	
+	f.set_size_inches(14,6)
+	#f.figsize=(8, 6)
+	if(resp=='y'):
+		plt.savefig("..\\plots\\"+name);		
+	plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.6);	
+	plt.show();
+	
+
 
 def configAxarr(axarr, t1, t2, t3):
-	axarr[0, 0].set_title(t1+"(Avarage)x Sample");
+	axarr[0, 0].set_title(t1+"(Avarage) x Sample");
 	axarr[0, 0].set_xlabel("Sample");
 	axarr[0, 0].set_ylabel(t1);
 	axarr[0, 0].grid();
-	axarr[0, 1].set_title(t2+"(Avarage)x Sample");
+	axarr[0, 1].set_title(t2+"(Avarage) x Sample");
 	axarr[0, 1].set_xlabel("Sample");
 	axarr[0, 1].set_ylabel(t2);
 	axarr[0, 1].grid();
-	axarr[0, 2].set_title(t3+"(Avarage)x Sample");
+	axarr[0, 2].set_title(t3+"(Avarage) x Sample");
 	axarr[0, 2].set_xlabel("Sample");
 	axarr[0, 2].set_ylabel(t3);
 	axarr[0, 2].grid();
-	axarr[1, 0].set_title(t1+"(Median)x Sample");
+	axarr[1, 0].set_title(t1+"(Median) x Sample");
 	axarr[1, 0].set_xlabel("Sample");
 	axarr[1, 0].set_ylabel(t1);
 	axarr[1, 0].grid();
-	axarr[1, 1].set_title(t2+"(Median)x Sample");
+	axarr[1, 1].set_title(t2+"(Median) x Sample");
 	axarr[1, 1].set_xlabel("Sample");
 	axarr[1, 1].set_ylabel(t2);
 	axarr[1, 1].grid();
-	axarr[1, 2].set_title(t3+"(Median)x Sample");
+	axarr[1, 2].set_title(t3+"(Median) x Sample");
 	axarr[1, 2].set_xlabel("Sample");
 	axarr[1, 2].set_ylabel(t3);
 	axarr[1, 2].grid();
-	axarr[2, 0].set_title(t1+"(Mode)x Sample");
+	axarr[2, 0].set_title(t1+"(Mode) x Sample");
 	axarr[2, 0].set_xlabel("Sample");
 	axarr[2, 0].set_ylabel(t1);
 	axarr[2, 0].grid();
-	axarr[2, 1].set_title(t2+"(Mode)x Sample");
+	axarr[2, 1].set_title(t2+"(Mode) x Sample");
 	axarr[2, 1].set_xlabel("Sample");
 	axarr[2, 1].set_ylabel(t2);
 	axarr[2, 1].grid();
-	axarr[2, 2].set_title(t3+"(Mode)x Sample");
+	axarr[2, 2].set_title(t3+"(Mode) x Sample");
 	axarr[2, 2].set_xlabel("Sample");
 	axarr[2, 2].set_ylabel(t3);
 	axarr[2, 2].grid();	
+
 
 	
 #domainColor2D();
@@ -653,9 +674,9 @@ def configAxarr(axarr, t1, t2, t3):
 #histogramColor();
 #calculateRGB();
 #calculateHSV();
-makePlots("..\\outputRGB.csv");
+makePlots("..\\outputHSV.csv");
+#makeSeparetedPlot("..\\outputHSV.csv");
 
-#"""
 import unittest;
 class MyTest(unittest.TestCase):
 	import numpy as np;
@@ -683,6 +704,11 @@ class MyTest(unittest.TestCase):
 		
 		#getMedian();
 		self.assertEqual(getMedian(5, vec7, vec8, vec9), [5, 0, 8]);		
-#"""		
+
+
+
+
+
+
 		
 
