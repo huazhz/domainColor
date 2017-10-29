@@ -73,40 +73,6 @@ def HSVColor(file):
 	return imgData;
 
 
-def rgbHistogram(name, file):	
-	img = io.imread(file);
-	height, width = len(img), len(img[0]);	
-
-	z = [x for x in range(256)];
-	red = [0 for x in range(256)];
-	green = [0 for x in range(256)];
-	blue = [0 for x in range(256)];
-	for i in range(height):
-		for j in range(width):
-			pixel = img[i, j];
-			red[pixel[0]]+=1;
-			green[pixel[1]]+=1;
-			blue[pixel[2]]+=1;	
-	name  = "..\\histograms\\hist_"+name
-	histogram(name, file, "RGB histogram", "RGB range", "Value",
-			 red, green, blue, z);
-
-
-def histogramColor():
-	startTime = time.time();
-	for subdir, dirs, files in os.walk(os.path.abspath(os.path.join('.\\', os.pardir))+'\\Images\\'):
-		group = subdir;		
-		print(subdir.split("\\")[-1])
-		print(subdir);
-		for file in files:
-			print("\t",file);
-			name = file;
-			file = subdir+"\\"+file
-			rgbHistogram(name, file);									
-	elapsedTime = time.time() - startTime;
-	print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);		
-
-
 def domainColor2D():
 	title = "DomainColor";
 	xTitle = "Sample";
@@ -183,7 +149,102 @@ def domainColor3D():
 	print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
 	dots.plot();	
 
+def calculateLAB():
+	startTime = time.time();
+	outFile = open("..\\outputLAB.csv", "w",newline='');
+	writer = csv.writer(outFile, delimiter=';', quotechar=' ', quoting=csv.QUOTE_ALL);
+	writer.writerow(["GROUP;NAME;L(AVARAGE);A(AVARAGE);B(AVARAGE);L(MEDIAN);A(MEDIAN);B(MEDIAN);L(MODE);A(MODE);B(MODE)"]);
+	for subdir, dirs, files in os.walk(os.path.abspath(os.path.join('.\\', os.pardir))+'\\Images\\'):
+		group = subdir.split("\\")[-1];
+		print(subdir);
+		for file in files:
+			print("\t",file);
+			name = file;
+			file = subdir+"\\"+file
+			labAva, labMed, labMode = calculeLABHistogram(file);
+			print("labAvarage ", labAva);
+			print("labMedian ", labMed);
+			print("labMode ", labMode);
+			#time.sleep(10);			
+			row = ("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s") % (group, name, str(labAva[0]), str(labAva[1]), str(labAva[2]),
+				str(labMed[0]), str(labMed[1]), str(labMed[2]), str(labMode[0]), str(labMode[1]), str(labMode[2]));
+			writer.writerow([row]);										
+	elapsedTime = time.time() - startTime;
+	outFile.close();
+	print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
 
+
+def calculeLABHistogram(file):
+	img = io.imread(file);
+	height, width = len(img), len(img[0]);
+	labImage = color.rgb2lab(img);	
+	
+	l = [0 for x in range(101)];#   0 : 100
+	a = [0 for x in range(256)];#-128 : 127
+	b = [0 for x in range(256)];#-128 : 127
+	for i in range(height):
+		for j in range(width):
+			pixel = labImage[i,j];
+			#print(pixel);
+			l[int(round(pixel[0]))]+=1;
+			a[int(round(pixel[1] + 128))]+=1;
+			b[int(round(pixel[2] + 128))]+=1;
+	#mode of LAB
+	labMode = [getMode(l), getMode(a), getMode(b)];
+	labMode[1] = labMode[1] - 128;
+	labMode[2] = labMode[2] - 128; 
+	
+	#median of LAB
+	half = height*width/2;
+	labMed = getMedian(half, l, a, b);
+	labMed[1] = labMed[1] - 128;
+	labMed[2] = labMed[2] - 128;
+	
+	#avarage of LAB
+	labAva = [getAvarage(l, height*width), getAvarage(a, height*width), getAvarage(b, height*width)];
+	labAva[1] = labAva[1] - 128;
+	labAva[2] = labAva[2] - 128;
+	
+	return labAva, labMed, labMode;
+
+def concertaLAB():	
+	inFile = open("..\\outputLAB.csv", "r",newline='');
+	reader = csv.reader(inFile);
+	first = True;
+	nRows = [];
+	for row in reader:
+		if(first):
+			first = False;
+		else:
+			i = row[0].split(';');
+			print(i)
+			group = i[0];
+			file = i[1];
+			c1 = i[2];
+			c2 = str( int(i[3]) - 128);
+			c3 = str( int(i[4]) - 128);
+			c4 = i[5];
+			c5 = str( int(i[6]) - 128);
+			c6 = str( int(i[7]) - 128);
+			c7 = i[8];
+			c8 = str( int(i[9]) - 128);
+			c9 = str( int(i[10]) - 128);			
+			nRows.append([
+						( ("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s") %
+				(group, file, c1, c2, c3, c4, c5, c6, c7, c8, c9) )
+						]);			
+	inFile.close()
+	
+	outFile = open("..\\outputLAB2.csv", "w",newline='');
+	writer = csv.writer(outFile, delimiter=';', quotechar=' ', quoting=csv.QUOTE_ALL);
+	writer.writerow(["GROUP;NAME;L(AVARAGE);A(AVARAGE);B(AVARAGE);L(MEDIAN);A(MEDIAN);B(MEDIAN);L(MODE);A(MODE);B(MODE)"]);
+	
+	for nR in nRows:
+		writer.writerow(nR);		
+			
+	outFile.close()
+			
+			
 def calculateHSV():
 	startTime = time.time();
 	outFile = open("..\\outputHSV.csv", "w",newline='');
@@ -200,8 +261,8 @@ def calculateHSV():
 			print("hsvAvarage ", hsvAva);
 			print("hsvMedian ", hsvMed);
 			print("hsvMode ", hsvMode);
-			#time.sleep(10);
-			row = str(str(group)+";"+str(name)+";"+str(hsvAva[0])+";"+str(hsvAva[1])+";"+str(hsvAva[2])+";"+str(hsvMed[0])+";"+str(hsvMed[1])+";"+str(hsvMed[2])+";"+str(hsvMode[0])+";"+str(hsvMode[1])+";"+str(hsvMode[2]));
+			row = ("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s") % (group, name, str(hsvAva[0]), str(hsvAva[1]), str(hsvAva[2]),
+				str(hsvMed[0]), str(hsvMed[1]), str(hsvMed[2]), str(hsvMode[0]), str(hsvMode[1]), str(hsvMode[2]));
 			writer.writerow([row]);
 										
 	elapsedTime = time.time() - startTime;
@@ -232,16 +293,13 @@ def calculeHSVHistogram(file):
 			h[int(round(pixel[0]))]+=1;
 			s[int(round(pixel[1]))]+=1;
 			v[int(round(pixel[2]))]+=1;			
-	#mode of RGB
+	#mode of HSV
 	hsvMode = [getMode(h), getMode(s), getMode(v)];	
-	#median of RGB
-	#h.sort();
-	#s.sort();
-	#v.sort();
+	#median of HSV	
 	half = height*width/2;
 	hsvMed = getMedian(half, h, s, v);	
-	#avarage of RGB
-	hsvAva = getAvarage(hsvImage, height, width);
+	#avarage of HSV
+	hsvAva = [getAvarage(h, height*width), getAvarage(s, height*width),getAvarage(v, height*width)];
 	
 	return hsvAva, hsvMed, hsvMode; 
 
@@ -263,7 +321,8 @@ def calculateRGB():
 			print("rgbMedian ", rgbMed);
 			print("rgbMode ", rgbMode);
 			#time.sleep(10);
-			row = str(str(group)+";"+str(name)+";"+str(rgbAva[0])+";"+str(rgbAva[1])+";"+str(rgbAva[2])+";"+str(rgbMed[0])+";"+str(rgbMed[1])+";"+str(rgbMed[2])+";"+str(rgbMode[0])+";"+str(rgbMode[1])+";"+str(rgbMode[2]));
+			row = ("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s") % (group, name, str(rgbAva[0]), str(rgbAva[1]), str(rgbAva[2]),
+				str(rgbMed[0]), str(rgbMed[1]), str(rgbMed[2]), str(rgbMode[0]), str(rgbMode[1]), str(rgbMode[2]));
 			writer.writerow([row]);
 										
 	elapsedTime = time.time() - startTime;
@@ -291,8 +350,8 @@ def calculeRGBHistogram(file):
 	#blue.sort();
 	half = height*width/2;
 	rgbMed = getMedian(half, red, green, blue);	
-	#avarage of RGB
-	rgbAva = getAvarage(img, height, width);
+	#avarage of RGB	
+	rgbAva = [getAvarage(red, height*width), getAvarage(green, height*width), getAvarage(blue, height*width)];
 	
 	return rgbAva, rgbMed, rgbMode; 
 
@@ -309,40 +368,33 @@ def getMode(vector):
 	return position;
 
 
-def getAvarage(picture, height, width):
-	rAvarage = 0.0;
-	gAvarage = 0.0;
-	bAvarage = 0.0;
-	first = True;
-	for i in range(height):
-		for j in range(width):
-			pixel = picture[i, j];
-			rAvarage+= pixel[0];
-			gAvarage+= pixel[1];
-			bAvarage+= pixel[2];
-	rAvarage/=(width*height);
-	gAvarage/=(width*height);
-	bAvarage/=(width*height);
-	return [int(rAvarage), int(gAvarage), int(bAvarage)];
+def getAvarage(c, size):
+	cAvarage = 0.0;	
+	
+	for i in range(len(c)):
+		cAvarage+=(c[i]*i);
+	cAvarage= cAvarage/size;	
+	
+	return int(cAvarage);
 
 
-def getMedian(half, red, green, blue):
+def getMedian(half, c1, c2, c3):
 	cont = 0;
 	i = 0;
-	while(cont+red[i] < half):
-		cont+=red[i];
+	while(cont+c1[i] < half):
+		cont+=c1[i];
 		i+=1;
 	rMedian = i;
 	cont = 0;
 	i = 0;
-	while(cont+green[i] < half):
-		cont+=green[i];
+	while(cont+c2[i] < half):
+		cont+=c2[i];
 		i+=1;
 	gMedian = i;
 	cont = 0;
 	i = 0;
-	while(cont+blue[i] < half):
-		cont+=blue[i];
+	while(cont+c3[i] < half):
+		cont+=c3[i];
 		i+=1;
 	bMedian = i;
 	return [rMedian, gMedian, bMedian];
@@ -378,7 +430,11 @@ def makeSeparetedPlot(f):
 			if(row[0].endswith("V(MODE) ")):
 				t1 = "H";
 				t2 = "S";
-				t3 = "V";			
+				t3 = "V";
+			elif(row[0].endswith("B(MODE) ")):
+				t1 = "L";
+				t2 = "A";
+				t3 = "B";	
 		else:			
 			item = row[0].split(";");
 			if(second):
@@ -506,6 +562,11 @@ def makePlots(f):
 				t1 = "H";
 				t2 = "S";
 				t3 = "V";
+				name = "ALL_PLOTS_HSV";
+			elif(row[0].endswith("B(MODE) ")):
+				t1 = "L";
+				t2 = "A";
+				t3 = "B";
 				name = "ALL_PLOTS_HSV";
 			configAxarr(axarr, t1, t2, t3);
 		else:			
@@ -669,13 +730,12 @@ def configAxarr(axarr, t1, t2, t3):
 
 
 	
-#domainColor2D();
-#domainColor3D();
-#histogramColor();
 #calculateRGB();
 #calculateHSV();
-makePlots("..\\outputHSV.csv");
-#makeSeparetedPlot("..\\outputHSV.csv");
+#calculateLAB();
+makePlots("..\\outputLAB.csv");
+#concertaLAB();
+#makeSeparetedPlot("..\\outputLAB.csv");
 
 import unittest;
 class MyTest(unittest.TestCase):
