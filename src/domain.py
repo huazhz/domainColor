@@ -5,6 +5,7 @@ from src.model.easyPlot import dotsPlot2D, dotsPlot3D, histogram;
 from src.model.imageData import imageData;
 from matplotlib import pyplot as plt;
 from matplotlib import ticker
+#from mpl_toolkits.mplot3d import axes3d, Axes3D
 '''
 https://en.wikipedia.org/wiki/HSL_and_HSV#From_HSV
 http://fourier.eng.hmc.edu/e161/lectures/ColorProcessing/node2.html
@@ -16,27 +17,17 @@ https://cate.blog/about/
 '''
 def getDomainColor(allPixels, width, height):
 	hueRange = 360;
-	hues = [0 for z in range(hueRange)];
-	#hues = [0];
-	#print(len(hues));
+	hues = [0 for z in range(hueRange)];	
 	saturations = [0 for z in range(hueRange)];
 	brightnesses = [0 for z in range(hueRange)];
 	
 	for x in range(width):
 		for y in range(height):
-				#print("x: ",x,"y: ", y," value: ", allPixels[x][y]);
-				pixel = allPixels[x][y];								
-				#time.sleep(2);
-				hues[int(pixel[0])]+=1;
-				saturations[int(pixel[0])] += pixel[1];
-				brightnesses[int(pixel[0])] += pixel[2];
-	print(hues)
-	'''
-	for pixel in allPixels:
-		hues[int(pixel[0])]+=1;
-		saturations[int(pixel[0])] += pixel[1];
-		brightnesses[int(pixel[0])] += pixel[2];
-	'''
+			pixel = allPixels[x, y];
+			c1 = int( round(pixel[0]*359) );
+			hues[c1]+=1;
+			saturations[c1] += pixel[1]*101;
+			brightnesses[c1] += pixel[2]*101;	
 	maior = hues[0];
 	hue = 0;
 	cont = 0;
@@ -44,19 +35,12 @@ def getDomainColor(allPixels, width, height):
 		if(h > maior):
 			maior = h; 
 			hue = cont;
-		cont+=1;
-	
+		cont+=1;	
 	h = hue;
-	#s = saturations[h]/maior;
-	#b = brightnesses[h]/maior;
-	s = (saturations[h]/maior)*100;
-	b = (brightnesses[h]/maior)*100;
-	
-	print("h: ",h,", com: ",maior," aparicoes");
-	print("s: ",s);
-	print("b: ",b);
-	
-	return [h, s, b], maior;
+	s = int(round(saturations[h]/maior));
+	b = int(round(brightnesses[h]/maior));	
+	#return [h, s, b], maior;
+	return h, s, b;
 
 
 def HSVColor(file):	
@@ -71,44 +55,6 @@ def HSVColor(file):
 	imgData = imageData(file, img.size);
 	imgData.setDomainColor(domainColor, numApp);
 	return imgData;
-
-
-def domainColor2D():
-	title = "DomainColor";
-	xTitle = "Sample";
-	yTitle = "Hue value";
-	dots = dotsPlot2D(title, xTitle, yTitle);
-	
-	outFile = open("..\\output2d.csv", "w");
-	writer = csv.writer(outFile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_ALL);
-	writer.writerow(["NAME;DOMAIN COLOR; NUMBER OF APPARITIONS; SIZE IN PIXELS"]);
-	startTime = time.time();
-	cont = 1;
-	for subdir, dirs, files in os.walk(os.path.abspath(os.path.join('.\\', os.pardir))+'\\Images\\'):
-		group = subdir;		
-		x = [];
-		y = [];		
-		imgData = [];
-		print(subdir)
-		
-		for file in files:
-			print("\t",file);
-			file = subdir+"\\"+file	
-			i = HSVColor(file);
-			imgData.append(i);
-			x.append(cont);
-			y.append(i.domainColor[0]);
-			cont+=1;					
-		
-		if(len(x) != 0):		
-			dots.addDot(x, y, group);						
-			for im in imgData:
-				writer.writerow([im]);			
-	outFile.close();
-	elapsedTime = time.time() - startTime;
-	print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
-	
-	dots.plot();
 
 
 
@@ -148,6 +94,70 @@ def domainColor3D():
 	elapsedTime = time.time() - startTime;
 	print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
 	dots.plot();	
+
+
+def calculateLUV():
+	startTime = time.time();
+	outFile = open("..\\outputLUV.csv", "w",newline='');
+	writer = csv.writer(outFile, delimiter=';', quotechar=' ', quoting=csv.QUOTE_ALL);
+	writer.writerow(["GROUP;NAME;L(AVARAGE);U(AVARAGE);V(AVARAGE);L(MEDIAN);U(MEDIAN);V(MEDIAN);L(MODE);U(MODE);V(MODE)"]);
+	for subdir, dirs, files in os.walk(os.path.abspath(os.path.join('.\\', os.pardir))+'\\Images\\'):
+		group = subdir.split("\\")[-1];
+		print(subdir);
+		for file in files:
+			print("\t",file);
+			name = file;
+			file = subdir+"\\"+file
+			luvAva, luvMed, luvMode = calculeLUVHistogram(file);
+			print("luvAvarage ", luvAva);
+			print("luvMedian ", luvMed);
+			print("luvMode ", luvMode);
+			#time.sleep(3);			
+			row = ("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s") % (group, name, str(luvAva[0]), str(luvAva[1]), str(luvAva[2]),
+				str(luvMed[0]), str(luvMed[1]), str(luvMed[2]), str(luvMode[0]), str(luvMode[1]), str(luvMode[2]));
+			writer.writerow([row]);										
+	elapsedTime = time.time() - startTime;
+	outFile.close();
+	print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
+
+
+def calculeLUVHistogram(file):
+	img = io.imread(file);
+	height, width = len(img), len(img[0]);		
+	luvImage = color.rgb2luv(img);
+	
+	l = [0 for x in range(101)];#   0 : 100
+	#u = [0 for x in range(201)];#-100 : 100
+	#v = [0 for x in range(201)];#-100 : 100
+	u = [0 for x in range(501)];#-100 : 100
+	v = [0 for x in range(501)];#-100 : 100
+	for i in range(height):
+		for j in range(width):
+			pixel = luvImage[i,j];
+			#print(pixel);
+			l[int(round(pixel[0]))]+=1;
+			#u[int(round(pixel[1] + 100))]+=1;			
+			#v[int(round(pixel[2] + 100))]+=1;
+			u[int(round(pixel[1] + 250))]+=1;
+			v[int(round(pixel[2] + 250))]+=1;
+	#mode of LUV
+	luvMode = [getMode(l), getMode(u), getMode(v)];
+	luvMode[1] = luvMode[1] - 250;
+	luvMode[2] = luvMode[2] - 250; 
+	
+	#median of LUV
+	half = height*width/2;
+	luvMed = getMedian(half, l, u, v);
+	luvMed[1] = luvMed[1] - 250;
+	luvMed[2] = luvMed[2] - 250;
+	
+	#avarage of LUV
+	luvAva = [getAvarage(l, height*width), getAvarage(u, height*width), getAvarage(v, height*width)];
+	luvAva[1] = luvAva[1] - 250;
+	luvAva[2] = luvAva[2] - 250;
+	
+	return luvAva, luvMed, luvMode;
+
 
 def calculateLAB():
 	startTime = time.time();
@@ -233,7 +243,7 @@ def concertaLAB():
 						( ("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s") %
 				(group, file, c1, c2, c3, c4, c5, c6, c7, c8, c9) )
 						]);			
-	inFile.close()
+	inFile.close
 	
 	outFile = open("..\\outputLAB2.csv", "w",newline='');
 	writer = csv.writer(outFile, delimiter=';', quotechar=' ', quoting=csv.QUOTE_ALL);
@@ -243,6 +253,40 @@ def concertaLAB():
 		writer.writerow(nR);		
 			
 	outFile.close()
+
+
+def calculateHSV3D():
+	startTime = time.time();
+	outFile = open("..\\outputHSV3D.csv", "w",newline='');
+	writer = csv.writer(outFile, delimiter=';', quotechar=' ', quoting=csv.QUOTE_ALL);
+	writer.writerow(["GROUP;NAME;H(MODE);S(AVARAGE);V(AVARAGE)"]);
+	for subdir, dirs, files in os.walk(os.path.abspath(os.path.join('.\\', os.pardir))+'\\Images\\'):
+		group = subdir.split("\\")[-1];
+		print(subdir);
+		for file in files:
+			print("\t",file);
+			name = file;
+			file = subdir+"\\"+file
+			hMode, sAva, vAva = calculeHSVHistogram3D(file);
+			print("hMode ", hMode);
+			print("sAva ", sAva);
+			print("vAva ", vAva);
+			row = ("%s;%s;%s;%s;%s") % (group, name, str(hMode), str(sAva), str(vAva));
+			writer.writerow([row]);			
+										
+	elapsedTime = time.time() - startTime;
+	outFile.close();
+	print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
+
+
+def calculeHSVHistogram3D(file):
+	img = io.imread(file);
+	height, width = len(img), len(img[0]);		
+	hsvImage = color.rgb2hsv(img);
+	
+	hsvAva, hsvMed, hsvMode = getDomainColor(hsvImage, height, width);
+	
+	return hsvAva, hsvMed, hsvMode; 
 			
 			
 def calculateHSV():
@@ -400,6 +444,80 @@ def getMedian(half, c1, c2, c3):
 	return [rMedian, gMedian, bMedian];
 
 
+def makePlot3D(f):
+	inFile = open(f, "r",newline='');
+	reader = csv.reader(inFile);	
+	first = True;
+	second = True;
+	t1 = "H(MODE)";
+	t2 = "S(AVARAGE)";
+	t3 = "V(AVARAGE)";
+	group = [];
+	qtdGroup = [];
+	file = [];
+	c1 = [];
+	c2 = [];
+	c3 = [];	
+	cont = 0;
+	for row in reader:
+		if(first):
+			first = False;
+			'''
+			if(row[0].endswith("V(MODE) ")):
+				t1 = "H";
+				t2 = "S";
+				t3 = "V";
+			elif(row[0].endswith("B(MODE) ")):
+				t1 = "L";
+				t2 = "A";
+				t3 = "B";
+			'''	
+		else:			
+			item = row[0].split(";");
+			if(second):
+				second = False;
+				group.append(item[0]);
+				file.append(item[1]);
+				c1.append(int(item[2]));
+				c2.append(int(item[3]));
+				c3.append(int(item[4]));				
+				cont+=1;
+			#new group to plot, so plot the actual before
+			elif(group[-1] != item[0]):
+				qtdGroup.append(cont);
+				group.append(item[0]);
+				file.append(item[1]);
+				c1.append(int(item[2]));
+				c2.append(int(item[3]));
+				c3.append(int(item[4]));				
+				cont+=1;
+			else:
+				file.append(item[1]);
+				c1.append(int(item[2]));
+				c2.append(int(item[3]));
+				c3.append(int(item[4]));				
+				cont+=1;	
+	qtdGroup.append(cont);
+	inFile.close();
+	a = qtdGroup[0];#1: 0 	 - 149
+	b = qtdGroup[1];#2: 150 - 299
+	c = qtdGroup[2];#3: 300 - 499	
+	
+	fig = plt.figure();        
+	ax = fig.add_subplot(111, projection = '3d');
+	#ax = fig.gca(projection='3d');
+	#ax = Axes3D(fig)    
+	ax.set_xlabel("X - Value(Avarage)");
+	ax.set_ylabel("Y - Saturation(Avarage)");
+	ax.set_zlabel("Z - Hue(Mode)");	
+	ax.scatter(c3[0:a-1], c2[0:a-1], c1[0:a-1], label=group[0]);
+	ax.scatter(c3[a:b-1], c2[a:b-1], c1[a:b-1], label=group[1]);
+	ax.scatter(c3[b:c-1], c2[b:c-1], c1[b:c-1], label=group[2]);	            	
+	plt.grid();        
+	plt.legend();
+	plt.show();						
+
+
 def makeSeparetedPlot(f):
 	inFile = open(f, "r",newline='');
 	reader = csv.reader(inFile);
@@ -427,14 +545,18 @@ def makeSeparetedPlot(f):
 	for row in reader:
 		if(first):
 			first = False;
-			if(row[0].endswith("V(MODE) ")):
+			if(row[0].endswith("S(MODE);V(MODE) ")):
 				t1 = "H";
 				t2 = "S";
 				t3 = "V";
 			elif(row[0].endswith("B(MODE) ")):
 				t1 = "L";
 				t2 = "A";
-				t3 = "B";	
+				t3 = "B";
+			elif(row[0].endswith("U(MODE);V(MODE) ")):
+				t1 = "L";
+				t2 = "U";
+				t3 = "V";	
 		else:			
 			item = row[0].split(";");
 			if(second):
@@ -558,7 +680,7 @@ def makePlots(f):
 	for row in reader:
 		if(first):
 			first = False;
-			if(row[0].endswith("V(MODE) ")):
+			if(row[0].endswith("S(MODE)V(MODE) ")):
 				t1 = "H";
 				t2 = "S";
 				t3 = "V";
@@ -567,7 +689,12 @@ def makePlots(f):
 				t1 = "L";
 				t2 = "A";
 				t3 = "B";
-				name = "ALL_PLOTS_HSV";
+				name = "ALL_PLOTS_LAB";
+			elif(row[0].endswith("U(MODE);V(MODE) ")):
+				t1 = "L";
+				t2 = "U";
+				t3 = "V";
+				name = "ALL_PLOTS_LUV";
 			configAxarr(axarr, t1, t2, t3);
 		else:			
 			item = row[0].split(";");
@@ -733,20 +860,21 @@ def configAxarr(axarr, t1, t2, t3):
 #calculateRGB();
 #calculateHSV();
 #calculateLAB();
-makePlots("..\\outputLAB.csv");
+#calculateLUV();
+#makePlot3D("..\\outputHSV3D.csv");
+#calculeLUVHistogram("D:\Workspaces\Python\domainColor\Images\H&E\H&E-NORMAL GLOMERULUS  (238).jpg");
+#calculateHSV3D();
+#makePlots("..\\outputLUV.csv");
 #concertaLAB();
-#makeSeparetedPlot("..\\outputLAB.csv");
+makeSeparetedPlot("..\\outputLUV.csv");
 
 import unittest;
 class MyTest(unittest.TestCase):
-	import numpy as np;
 	def test(self):
 		vec1 = [1 for i in range(10)];
 		vec2 = [i for i in range(10)];
 		vec3 = [0, 0, 0, 0, 10 ,15, 16, 22, 37];
-		vec4 = [-100, 3, 5, 7, 12, 14, 18, 0, 0, 11, 11, 1, 1, 1, 1];
-		vec5 = [[[1 for i in range(3)] for j in range(10)] for k in range(10)];
-		vec6 = [[[i for i in range(3)] for j in range(10)] for k in range(10)];
+		vec4 = [-100, 3, 5, 7, 12, 14, 18, 0, 0, 11, 11, 1, 1, 1, 1];				
 		#tamanho 10
 		vec7 = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2];
 		vec8 = [10, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -759,8 +887,8 @@ class MyTest(unittest.TestCase):
 		self.assertEqual(getMode(vec4), 6);
 		
 		#getAvarage();
-		#self.assertEqual(getAvarage(vec5, len(vec5), len(vec5[0])), [1, 1, 1]);
-		#self.assertEqual(getAvarage(vec6, len(vec6), len(vec6[0])), [0, 1, 2]);
+		self.assertEqual(getAvarage(vec1, len(vec1)), 4);
+		self.assertEqual(getAvarage(vec9, len(vec9)), 7);
 		
 		#getMedian();
 		self.assertEqual(getMedian(5, vec7, vec8, vec9), [5, 0, 8]);		
