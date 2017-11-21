@@ -1,17 +1,12 @@
 from __future__ import print_function;
 from skimage import color, io;
-import os, sys, time, csv;
-from src.model.easyPlot import dotsPlot2D, dotsPlot3D, histogram;
-from src.model.imageData import imageData;
+import os, time, csv;
 from matplotlib import pyplot as plt;
-from matplotlib import ticker
+import numpy as np;
 #from mpl_toolkits.mplot3d import axes3d, Axes3D
 '''
 https://en.wikipedia.org/wiki/HSL_and_HSV#From_HSV
 http://fourier.eng.hmc.edu/e161/lectures/ColorProcessing/node2.html
-'''
-
-'''
 https://cate.blog/2013/08/26/extracting-the-dominant-color-from-an-image-in-processing/
 https://cate.blog/about/
 '''
@@ -41,59 +36,6 @@ def getDomainColor(allPixels, width, height):
 	b = int(round(brightnesses[h]/maior));	
 	#return [h, s, b], maior;
 	return h, s, b;
-
-
-def HSVColor(file):	
-	img = io.imread(file);
-	height, width = len(img), len(img[0]);	
-	
-	print("tamanho em pixels: ", height, width);		
-	hsvImage = color.rgb2hsv(img);
-	#hsvImage = color.rgb2hsv(picture);
-	#hsvImage = color.convert_colorspace(img, 'RGB', 'HSV');
-	domainColor, numApp = getDomainColor(hsvImage, width, height);
-	imgData = imageData(file, img.size);
-	imgData.setDomainColor(domainColor, numApp);
-	return imgData;
-
-
-
-def domainColor3D():	
-	title = "DomainColor";
-	xTitle = "x - Hue value";
-	yTitle = "y - Saturation";
-	zTitle = "z - Value";
-	dots = dotsPlot3D(title, xTitle, yTitle, zTitle);
-
-	outFile = open("output.csv", "w");
-	writer = csv.writer(outFile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_ALL);
-	writer.writerow(["NAME;DOMAIN COLOR; NUMBER OF APPARITIONS; SIZE IN PIXELS"]);
-	startTime = time.time();
-	cont = 1;
-	for subdir, dirs, files in os.walk(os.path.abspath(os.path.join('.\\', os.pardir))+'\\Images\\'):
-		group = subdir;	
-		x = [];
-		y = [];
-		z = [];
-		imgData = [];
-		print(subdir)
-		for file in files:
-			print("\t",file);				
-			file = subdir+"\\"+file	
-			i = HSVColor(file);
-			imgData.append(i);			
-			x.append(i.domainColor[0]);
-			y.append(i.domainColor[1]);
-			z.append(i.domainColor[2]);					
-		
-		if(len(x) != 0):			
-			dots.addDot(x, y, z, group);
-			for im in imgData:
-				writer.writerow([im]);
-	outFile.close();
-	elapsedTime = time.time() - startTime;
-	print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
-	dots.plot();	
 
 
 def calculateLUV():
@@ -159,6 +101,131 @@ def calculeLUVHistogram(file):
 	return luvAva, luvMed, luvMode;
 
 
+def calculateLABDispersion():
+	startTime = time.time();
+	outFile = open("..\\outputLABDispersion.csv", "w",newline='');
+	writer = csv.writer(outFile, delimiter=';', quotechar=' ', quoting=csv.QUOTE_ALL);
+	writer.writerow(["GROUP;NAME;L(AVARAGE);A(AVARAGE);B(AVARAGE);L(VARIANCE);"+
+					"A(VARIANCE);B(VARIANCE);L(DEVIATION);A(DEVIATION);B(DEVIATION)"]);
+	for subdir, dirs, files in os.walk(os.path.abspath(os.path.join('.\\', os.pardir))+'\\Images\\'):
+		group = subdir.split("\\")[-1];
+		print(subdir);
+		for file in files:
+			print("\t",file);
+			name = file;
+			file = subdir+"\\"+file
+			labAva, labVar, labDev = calculeLABDispersionHistogram(file);
+			print("labAvarage ", labAva);
+			print("labVariance ", labVar);
+			print("labDeviation ", labDev);
+			#time.sleep(10);			
+			row = ("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s") % (group, name, str(labAva[0]), str(labAva[1]), str(labAva[2]),
+				str(labVar[0]), str(labVar[1]), str(labVar[2]), str(labDev[0]), str(labDev[1]), str(labDev[2]));
+			writer.writerow([row]);
+	elapsedTime = time.time() - startTime;
+	outFile.close();
+	print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
+
+
+def calculeLABDispersionHistogram(file):
+	img = io.imread(file);
+	height, width = len(img), len(img[0]);
+	labImage = color.rgb2lab(img);	
+	
+	l = [0 for x in range(101)];#   0 : 100
+	l2 = [];
+	a = [0 for x in range(256)];#-128 : 127
+	a2 = [];
+	b = [0 for x in range(256)];#-128 : 127
+	b2 = [];
+	for i in range(height):
+		for j in range(width):
+			pixel = labImage[i,j];
+			#print(pixel);
+			l2.append(pixel[0]);
+			a2.append(pixel[1]);
+			b2.append(pixel[2]);
+			l[int(round(pixel[0]))]+=1;
+			a[int(round(pixel[1]))]+=1;
+			b[int(round(pixel[2]))]+=1;	
+	#print("-1 ", a[-1], "256", a[255])
+	#print("129 ", a[129], "-127", a[-127])
+	#print("-1 ", b[-1], "256", b[255])	
+	#avarage of LAB
+	size = height*width;
+	labAva = getAvarage2(l, a , b, size);
+	print("labAva ", labAva);
+	print(len(l2), len(a2), len(b2))
+	print("np average of l",np.average(l2));
+	print("np average of a",np.average(a2));
+	print("np average of b",np.average(b2));
+	print("np var of l",np.var(l2));
+	print("np var of a",np.var(a2));
+	print("np var of b",np.var(b2));
+	#labAva[1] = labAva[1];
+	#labAva[2] = labAva[2];
+		
+	#variance of LAB
+	labVar = labVariance(labAva, l, a, b, size);
+	
+	#dispersion of LAB
+	labDis = labDeviation(labVar);
+	
+	return labAva, labVar, labDis;
+
+def getAvarage2(l, a, b, size):	
+	lAvarage = 0.0;	
+	for i in range(len(l)):
+		lAvarage+=(l[i]*i);	
+	lAvarage = lAvarage/size;	
+	
+	aAvarage = 0.0;
+	for i in range(-128, 1, 127):
+		aAvarage+=(a[i]*i);	
+	aAvarage = aAvarage/size;	
+	
+	bAvarage = 0.0;	
+	for i in range(-128, 1, 127):
+		bAvarage+=(b[i]*i);	
+	bAvarage= bAvarage/size;
+	return [int(round(lAvarage)), int(round(aAvarage)), int(round(bAvarage))];
+
+
+def labVariance(labAva, l, a, b, size):
+	lVar = 0.0;
+	for x in range(len(l)):
+		lVar+= ((x - labAva[0])**2) * l[x];
+	lVar = lVar/size-1;	
+	
+	aVar = 0.0;
+	for x in range(len(a)):
+		lVar+= ( ( (x) - labAva[1]) **2) * a[x];		
+	aVar= aVar/size-1;
+	
+	bVar = 0.0;
+	for x in range(len(b)):
+		lVar+= ( ( (x) - labAva[2]) **2) * b[x];		
+	bVar= bVar/size-1;
+	
+	return [lVar, aVar, bVar];
+
+
+def variance(vec, size, avarage):
+	lVar = 0.0;
+	for x in range(len(vec)):
+		lVar+= ((x - avarage)**2) * vec[0];
+	lVar = lVar/size-1;
+
+def labDeviation(labVar):
+	if(labVar[0]<0):
+		labVar[0] = - labVar[0];
+	if(labVar[1]<0):
+		labVar[1] = - labVar[1];
+	if(labVar[2]<0):
+		labVar[2] = - labVar[2];
+	labDev = [(labVar[0]**(1/2)), (labVar[1]**(1/2)), (labVar[2]**(1/2))];
+	return labDev;
+
 def calculateLAB():
 	startTime = time.time();
 	outFile = open("..\\outputLAB.csv", "w",newline='');
@@ -209,12 +276,13 @@ def calculeLABHistogram(file):
 	labMed = getMedian(half, l, a, b);
 	labMed[1] = labMed[1] - 128;
 	labMed[2] = labMed[2] - 128;
-	
+	print("size ", height*width)
 	#avarage of LAB
 	labAva = [getAvarage(l, height*width), getAvarage(a, height*width), getAvarage(b, height*width)];
+	print("depois de dividir ",labAva)
 	labAva[1] = labAva[1] - 128;
 	labAva[2] = labAva[2] - 128;
-	
+	print("depois de subtrair 128 ",labAva)
 	return labAva, labMed, labMode;
 
 def concertaLAB():	
@@ -416,8 +484,8 @@ def getAvarage(c, size):
 	cAvarage = 0.0;	
 	
 	for i in range(len(c)):
-		cAvarage+=(c[i]*i);
-	cAvarage= cAvarage/size;	
+		cAvarage+=(c[i]*i);	
+	cAvarage= cAvarage/size;
 	
 	return int(cAvarage);
 
@@ -556,7 +624,7 @@ def makeSeparetedPlot(f):
 			elif(row[0].endswith("U(MODE);V(MODE) ")):
 				t1 = "L";
 				t2 = "U";
-				t3 = "V";	
+				t3 = "V";
 		else:			
 			item = row[0].split(";");
 			if(second):
@@ -609,7 +677,7 @@ def makeSeparetedPlot(f):
 	c = qtdGroup[2];#3: 300 - 499
 	
 	resp = input("save it?(y/n): ");
-	
+	'''
 	#AVARAGES
 	#c1(Avarage)
 	plotOneByOne(t1+"(Avarage) x Sample", "Sample", t1, group, x, c1Ava, a, b, c, resp);
@@ -631,8 +699,28 @@ def makeSeparetedPlot(f):
 	plotOneByOne(t2+"(Mode) x Sample", "Sample", t2, group, x, c2Mode, a, b, c, resp);
 	#c3(Mode)
 	plotOneByOne(t3+"(Mode) x Sample", "Sample", t3, group, x, c3Mode, a, b, c, resp);
-				
+	'''
+	newPlot(t2+"(Mode) x "+t3+"(Mode)", t2, t3, group, c2Mode, c3Mode, a, b, c, resp);
+	newPlot(t2+"(Avarage) x "+t3+"(Avarage)", t2, t3, group, c2Ava, c3Ava, a, b, c, resp);
+	newPlot(t2+"(Median) x "+t3+"(Median)", t2, t3, group, c2Median, c3Median, a, b, c, resp);
+	
 	inFile.close();
+
+def newPlot(title, xTitle, yTitle, group, x, y, a, b, c, resp):
+	fig, ax = plt.subplots();
+	plt.title(title);
+	plt.xlabel(xTitle);
+	plt.ylabel(yTitle);
+	ax.scatter(x[0:a-1], y[0:a-1], label = group[0]);	
+	ax.scatter(x[a:b-1], y[a:b-1], label = group[1]);
+	ax.scatter(x[b:c-1], y[b:c-1], label = group[2]);	
+	plt.legend();
+	plt.grid(True);
+	fig.set_size_inches(14,6)
+	if(resp == "y"):		
+		plt.savefig("..\\plots\\"+title);	
+	#plt.show();
+	plt.close();
 		
 	
 def plotOneByOne(title, xTitle, yTitle, group, x, y, a, b, c, resp):
@@ -865,8 +953,10 @@ def configAxarr(axarr, t1, t2, t3):
 #calculeLUVHistogram("D:\Workspaces\Python\domainColor\Images\H&E\H&E-NORMAL GLOMERULUS  (238).jpg");
 #calculateHSV3D();
 #makePlots("..\\outputLUV.csv");
+#makeSeparetedPlot("..\\outputLAB.csv");
+calculateLABDispersion();
 #concertaLAB();
-makeSeparetedPlot("..\\outputLUV.csv");
+
 
 import unittest;
 class MyTest(unittest.TestCase):
@@ -889,7 +979,12 @@ class MyTest(unittest.TestCase):
 		#getAvarage();
 		self.assertEqual(getAvarage(vec1, len(vec1)), 4);
 		self.assertEqual(getAvarage(vec9, len(vec9)), 7);
+		vec10 = [-20, 14, 33, -12, 0];#3
+		vec10 = [0, 34, 53, 8, 20];#23 - 20 = 3
 		
+		self.assertEqual(getAvarage(vec10, len(vec10)), 3);
+		self.assertEqual(variance(vec10, len(vec10), 3), 3);
+		#lVar+= ((x - avarage)**2) * vec[0];
 		#getMedian();
 		self.assertEqual(getMedian(5, vec7, vec8, vec9), [5, 0, 8]);		
 
