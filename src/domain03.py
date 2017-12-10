@@ -1,244 +1,339 @@
-from __future__ import print_function;
-from skimage import color, io, exposure;
-import os, time, csv, sys, pickle;
+#from __future__ import print_function;
 from matplotlib import pyplot as plt;
+from skimage import io, exposure;
+from scipy import sparse;
+import os, time, pickle;
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import KFold
+from sklearn.metrics import classification_report, confusion_matrix;
 import numpy as np; 
 
-   
-def calculateRGBColor():
-    startTime = time.time();
-    outFile = open("..\\outputRGBHistogramColors.bin", "wb");
+labelHEE = 0;
+labelPAS = 1;
+qtdDataTrainning = 530;
+qtdDataTestHEE = 223;
+qtdDataTestPAS = 30;
+
+def makePlots():
+    channels = ["RB", "RG", "GB", "RGB"];
+    numberOfShifts = [3, 4, 5, 6];    
+    dataRB = np.zeros((4,3,3), dtype=np.float32);
+    dataRG = np.zeros((4,3,3), dtype=np.float32);
+    dataGB = np.zeros((4,3,3), dtype=np.float32);
+    dataRGB = np.zeros((4,3,3), dtype=np.float32);     
+    for n in numberOfShifts:
+        dataRB[n-3] = testKNN("RB", n);
+        dataRG[n-3] = testKNN("RG", n);
+        dataGB[n-3] = testKNN("GB", n);
+        dataRGB[n-3] = testKNN("RGB", n);
     
+    plotOneByOne("RG", "n of shitfs", "proportion of each variable", dataRB);
+
+def plotOneByOne(title, xTitle, yTitle, data):
+    fig, ax = plt.subplots();
+    plt.title(title);
+    plt.xlabel(xTitle);
+    plt.ylabel(yTitle);
+    plt.plot([3,4,5,6], data[:,0,:], label= "H&E CLASS")
+    plt.plot([3,4,5,6], data[:,1,:], label= "PAS CLASS")
+    plt.plot([3,4,5,6], data[:,2,:], label= "ALL CLASSES")    
+    plt.legend();
+    plt.grid(True);
+    #fig.set_size_inches(14,6)        
+    plt.show();
+    plt.close();
+    
+    
+def testKNN(channels, numberOfShifts):
+    startTime = time.time();                     
+    fHEE = "..\\Logs\\3\\Teste\\"+channels+"\\test"+channels+"_"+str(numberOfShifts)+"HistogramColors_H&E.bin";
+    fPAS = "..\\Logs\\3\\Teste\\"+channels+"\\test"+channels+"_"+str(numberOfShifts)+"HistogramColors_PAS.bin";
+    fKNN = "..\\trainedKNN_"+str(numberOfShifts)+"HistogramColors_"+channels+".bin";
+    inFHEE = open(fHEE, 'rb');
+    inFPAS = open(fPAS, 'rb');
+    fileKNN = open(fKNN, 'rb');
+    base = 256>>numberOfShifts;
+
+    knn5 = pickle.load(fileKNN);
+    knn10 = pickle.load(fileKNN);
+    knn15 = pickle.load(fileKNN);
+    knn20 = pickle.load(fileKNN);                
+        
+    y_true = np.zeros((qtdDataTestHEE + qtdDataTestPAS), dtype=np.int);
+    y_pred5 = np.zeros((qtdDataTestHEE + qtdDataTestPAS), dtype=np.int);
+    y_pred10 = np.zeros((qtdDataTestHEE + qtdDataTestPAS), dtype=np.int);
+    y_pred15 = np.zeros((qtdDataTestHEE + qtdDataTestPAS), dtype=np.int);
+    y_pred20 = np.zeros((qtdDataTestHEE + qtdDataTestPAS), dtype=np.int);
+    data = np.zeros((qtdDataTestHEE + qtdDataTestPAS, base*base), dtype=np.float32);
+    if(len(channels) == 3):
+            data = np.zeros((qtdDataTestHEE + qtdDataTestPAS, base*base*base), dtype=np.float32);    
+    
+    for i in range(qtdDataTestHEE):
+        data[i] = linearize(base, pickle.load(inFHEE), channels);
+        y_true[i] = labelHEE;
+    for i in range(qtdDataTestPAS):
+        data[qtdDataTestHEE+i] = linearize(base, pickle.load(inFPAS), channels);        
+        y_true[qtdDataTestHEE+i] = labelPAS;
+    
+    y_pred5[ :qtdDataTestHEE] = knn5.predict(data[ :qtdDataTestHEE]);
+    y_pred10[ :qtdDataTestHEE] = knn10.predict(data[ :qtdDataTestHEE]);
+    y_pred15[ :qtdDataTestHEE] = knn15.predict(data[ :qtdDataTestHEE]);
+    y_pred20[ :qtdDataTestHEE] = knn20.predict(data[ :qtdDataTestHEE]);
+    
+    y_pred5[qtdDataTestHEE: ] = knn5.predict(data[qtdDataTestHEE: ]);
+    y_pred10[qtdDataTestHEE: ] = knn10.predict(data[qtdDataTestHEE: ]);
+    y_pred15[qtdDataTestHEE: ] = knn15.predict(data[qtdDataTestHEE: ]);
+    y_pred20[qtdDataTestHEE: ] = knn20.predict(data[qtdDataTestHEE: ]);
+    
+    target_names = ['HEE', 'PAS'];
+    #print("menor   ", y_true[ :qtdDataTestHEE ]);
+    #print("maior   ", y_true[qtdDataTestHEE: ]);
+    
+    elapsedTime = time.time() - startTime;
+    print(fKNN);
+    print("TIME: ",elapsedTime);
+    
+    print("CLASSIFICATION FOR KNN, K = 5\n"+classification_report(y_true, y_pred5, target_names=target_names));
+    print("CLASSIFICATION FOR KNN, K = 10\n"+classification_report(y_true, y_pred10, target_names=target_names));
+    print("CLASSIFICATION FOR KNN, K = 15\n"+classification_report(y_true, y_pred15, target_names=target_names));
+    print("CLASSIFICATION FOR KNN, K = 20\n"+classification_report(y_true, y_pred20, target_names=target_names));    
+    '''
+    print("\nCONFUSION MATRIX FOR KNN, K = 5 (tn, fp, fn, tp)")
+    print(confusion_matrix(y_true, y_pred5).ravel())
+    print("\nCONFUSION MATRIX FOR KNN, K = 10 (tn, fp, fn, tp)")
+    print(confusion_matrix(y_true, y_pred10).ravel())
+    print("\nCONFUSION MATRIX FOR KNN, K = 15 (tn, fp, fn, tp)")
+    print(confusion_matrix(y_true, y_pred15).ravel())
+    print("\nCONFUSION MATRIX FOR KNN, K = 20 (tn, fp, fn, tp)")
+    print(confusion_matrix(y_true, y_pred20).ravel())
+    '''
+    inFHEE.close();
+    inFPAS.close();
+    fileKNN.close();
+    
+    text = classification_report(y_true, y_pred5, target_names=target_names);
+    text = text.split('    ');
+    
+    HEEStatiscs = [text[7], text[8], text[9]];
+    PASStatiscs = [text[13], text[14], text[15]];
+    ALLStatis = [text[18], text[19], text[20]];
+    
+    return HEEStatiscs, PASStatiscs, ALLStatis;     
+    
+        
+def linearize(base, data, channels):
+    cont = 0;
+    if(len(channels) == 3):
+        X1 = np.zeros((base*base*base), dtype=np.float32);
+        for i in range(base):
+            for j in range(base):
+                for k in range(base):
+                    X1[cont] = data[i][j][k];
+                    cont+=1;
+        return X1;
+    elif(len(channels) == 2):
+        X1 = np.zeros((base*base), dtype=np.float32);
+        for i in range(base):
+            for j in range(base):                
+                    X1[cont] = data[i][j];
+                    cont+=1;
+        return X1;
+    
+
+def traineKNN(channels, numberOfShifts):    
+    fHEE = "..\\Logs\\3\\Treinamento\\"+channels+"\\output"+channels+"_"+str(numberOfShifts)+"HistogramColors_H&E.bin";
+    fPAS = "..\\Logs\\3\\Treinamento\\"+channels+"\\output"+channels+"_"+str(numberOfShifts)+"HistogramColors_PAS.bin";
+    inFHEE = open(fHEE, 'rb');
+    inFPAS = open(fPAS, 'rb');
+    print("Training KNN to channels "+channels+" with "+str(numberOfShifts)+" shifts");
+    #vHEE = [];
+    #vPAS = [];
+    base = 256>>numberOfShifts;    
+    X = [];
+    y = [];
+    '''
+    X = np.zeros((265*2), dtype=np.float32);
+    y = np.zeros((2), dtype=np.int)
+    '''
+    for i in range(int(qtdDataTrainning/2)):
+        '''        
+        print(i);
+        if(i==0):
+            X = np.concatenate([pickle.load(inFHEE), pickle.load(inFPAS)], axis=0);
+            y = np.concatenate([labelHEE, labelPAS], axis=0);            
+        else:
+            X = np.concatenate([X, pickle.load(inFHEE), pickle.load(inFPAS)], axis=0)
+            y = np.concatenate([y, labelHEE, labelPAS], axis=0);
+        time.sleep(2);
+        '''
+        #vHEE.append(pickle.load(inFHEE));
+        #vPAS.append(pickle.load(inFPAS));                
+        X.append(pickle.load(inFHEE));
+        y.append(labelHEE);
+        X.append(pickle.load(inFPAS));
+        y.append(labelPAS);
+        '''
+        if(i<265):
+            X[i] = pickle.load(inFHEE);
+            y[i] = labelHEE;
+        else:
+            X[i] = pickle.load(inFPAS);
+            y[i] = labelPAS;
+        '''
+    inFHEE.close();
+    inFPAS.close();
+    '''
+    print(X[0]);
+    print(len(X));
+    print(len(X[0]));    
+    print(len(X[0][0]));
+    print(X[0][0]);
+    print(y[0]);
+    '''
+    X1  = linearizeTraining(base, channels, X);    
+    y1 = np.array(y);
+    knn5 = KNeighborsClassifier(n_neighbors=5);
+    knn10 = KNeighborsClassifier(n_neighbors=10);
+    knn15 = KNeighborsClassifier(n_neighbors=15);
+    knn20 = KNeighborsClassifier(n_neighbors=20);        
+    kf = KFold(n_splits=10);
+    print(len(y1), len(X1))
+    
+    for k, (train, test) in enumerate(kf.split(X1, y1)):  
+        print("TRAIN:", train, " - TEST:", test);
+        knn5.fit(X1[train], y1[train]);
+        knn10.fit(X1[train], y1[train]);
+        knn15.fit(X1[train], y1[train]);
+        knn20.fit(X1[train], y1[train]);
+        print("K ->",k);
+        
+        print(knn5.score(X1[test], y1[test]));
+        print(knn10.score(X1[test], y1[test]));
+        print(knn15.score(X1[test], y1[test]));
+        print(knn20.score(X1[test], y1[test]));
+    
+    knnFile = open("..\\trainedKNN_"+str(numberOfShifts)+"HistogramColors_"+channels+".bin", "wb");
+    print(knn5.get_params());
+    print(knn10.get_params());
+    print(knn15.get_params());
+    print(knn20.get_params());    
+    pickle.dump(knn5, knnFile);    
+    pickle.dump(knn10, knnFile);    
+    pickle.dump(knn15, knnFile);    
+    pickle.dump(knn20, knnFile);
+    knnFile.close();
+    
+    
+def linearizeTraining(base, channels, X):    
+    if(len(channels) == 3):
+        X1 = np.zeros((qtdDataTrainning, base*base*base), dtype=np.float32);        
+        for i in range(qtdDataTrainning):
+            a = []
+            for j in range(base):
+                for k in range(base):
+                    for l in range(base):
+                        a.append(X[i][j][k][l]);            
+            X1[i] = a;
+        return X1;
+    elif(len(channels) == 2):
+        X1 = np.zeros((qtdDataTrainning, base*base), dtype=np.float32);        
+        for i in range(qtdDataTrainning):
+            a = []
+            for j in range(base):
+                for k in range(base):
+                    a.append(X[i][j][k]);            
+            X1[i] = a;
+        return X1;
+   
+def calculateRGBColor(n, isTest):
+    startTime = time.time();
+    #outFileRG = open("..\\outputRG_"+str(n)+"HistogramColors.bin", "wb");
+    #outFileRB = open("..\\outputRB_"+str(n)+"HistogramColors.bin", "wb");
+    #outFileGB = open("..\\outputGB_"+str(n)+"HistogramColors.bin", "wb");
+    #outFileRGB = open("..\\outputRGB_"+str(n)+"HistogramColors.bin", "wb");
+    a = "output";
+    if(isTest):
+            a = "test";        
     for subdir, dirs, files in os.walk(os.path.abspath(os.path.join('.\\', os.pardir))+'\\Images\\'):
         group = subdir.split("\\")[-1];
+        outFileRG = open("..\\"+a+"RG_"+str(n)+"HistogramColors_"+group+".bin", "wb");
+        outFileRB = open("..\\"+a+"RB_"+str(n)+"HistogramColors_"+group+".bin", "wb");
+        outFileGB = open("..\\"+a+"GB_"+str(n)+"HistogramColors_"+group+".bin", "wb");
+        outFileRGB = open("..\\"+a+"RGB_"+str(n)+"HistogramColors_"+group+".bin", "wb");        
         print(subdir);
         for file in files:
             print("\t",file);
-            name = file;
+            #name = file;
             file = subdir+"\\"+file
-            rb, rg, gb, rgb = calculeRGBColorHistogram(file);                            
-            pickle.dump(rb, outFile);
-            pickle.dump(rg, outFile);
-            pickle.dump(gb, outFile);
-            pickle.dump(rgb, outFile);
-            elapsedTime = time.time() - startTime;
-            outFile.close();
-            print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
-            sys.exit();
+            rg, rb, gb, rgb = calculeRGBColorHistogram(file, n);
             
+            pickle.dump(rg, outFileRG);
+            pickle.dump(rb, outFileRB);
+            pickle.dump(gb, outFileGB);
+            pickle.dump(rgb, outFileRGB);
+        outFileRG.close();
+        outFileRB.close();
+        outFileGB.close();
+        outFileRGB.close();                 
     elapsedTime = time.time() - startTime;
-    outFile.close();
+    #outFileRG.close();
+    #outFileRB.close();
+    #outFileGB.close();
+    #outFileRGB.close();
     print("FINISH, ELAPSED TIME(seconds): ",elapsedTime);
     
     
-def calculeRGBColorHistogram(file):
+def calculeRGBColorHistogram(file, n):
     img = io.imread(file);
     height, width = len(img), len(img[0]);
     size = height*width;
+    base = 256>>n
     for channel in range(img.shape[2]):
         img[:, :, channel] = exposure.rescale_intensity(img[:, :, channel],
             in_range=(np.amin(img[:, :, channel]), np.amax(img[:, :, channel])), out_range=(0, 255));
     
-    rb1 = np.zeros((128, 128), dtype=np.float64);
-    rg1 = np.zeros((128, 128), dtype=np.float64);
-    gb1 = np.zeros((128, 128), dtype=np.float64);
-    
-    rb2 = np.zeros((64, 64), dtype=np.float64);
-    rg2 = np.zeros((64, 64), dtype=np.float64);
-    gb2 = np.zeros((64, 64), dtype=np.float64);
-    
-    rb3 = np.zeros((32, 32), dtype=np.float64);
-    rg3 = np.zeros((32, 32), dtype=np.float64);
-    gb3 = np.zeros((32, 32), dtype=np.float64);
-    
-    rb4 = np.zeros((16, 16), dtype=np.float64);
-    rg4 = np.zeros((16, 16), dtype=np.float64);
-    gb4 = np.zeros((16, 16), dtype=np.float64);
-    
-    rb5 = np.zeros((8, 8), dtype=np.float64);
-    rg5 = np.zeros((8, 8), dtype=np.float64);
-    gb5 = np.zeros((8, 8), dtype=np.float64);
-    
-    rb6 = np.zeros((4, 4), dtype=np.float64);
-    rg6 = np.zeros((4, 4), dtype=np.float64);
-    gb6 = np.zeros((4, 4), dtype=np.float64);
-    
-    rgb1 = np.zeros((128, 128, 128), dtype=np.float64);
-    rgb2 = np.zeros((65, 64, 64), dtype=np.float64);
-    rgb3 = np.zeros((32, 32, 32), dtype=np.float64);
-    rgb4 = np.zeros((16, 16, 16), dtype=np.float64);
-    rgb5 = np.zeros((8, 8, 8), dtype=np.float64);
-    rgb6 = np.zeros((4, 4, 4), dtype=np.float64);
-    #rb1 = [[0 for i in range(128)] for j in range(128)];
-    #rg1 = [[0 for i in range(128)] for j in range(128)];
-    #gb1 = [[0 for i in range(128)] for j in range(128)];
-    
-    #rb2 = [[0 for i in range(64)] for j in range(64)];
-    #rg2 = [[0 for i in range(64)] for j in range(64)];
-    #gb2 = [[0 for i in range(64)] for j in range(64)];
-    
-    #rb3 = [[0 for i in range(32)] for j in range(32)];
-    #rg3 = [[0 for i in range(32)] for j in range(32)];
-    #gb3 = [[0 for i in range(32)] for j in range(32)];
-    
-    #rb4 = [[0 for i in range(16)] for j in range(16)];
-    #rg4 = [[0 for i in range(16)] for j in range(16)];
-    #gb4 = [[0 for i in range(16)] for j in range(16)];
-    
-    #rb5 = [[0 for i in range(8)] for j in range(8)];
-    #rg5 = [[0 for i in range(8)] for j in range(8)];
-    #gb5 = [[0 for i in range(8)] for j in range(8)];
-    
-    #rb6 = [[0 for i in range(4)] for j in range(4)];
-    #rg6 = [[0 for i in range(4)] for j in range(4)];
-    #gb6 = [[0 for i in range(4)] for j in range(4)];
-    
-    #rgb3 = [[[0 for i in range(32)] for j in range(32)] for k in range(32)];
-    #rgb4 = [[[0 for i in range(16)] for j in range(16)] for k in range(16)];
-    #rgb5 = [[[0 for i in range(8)] for j in range(8)] for k in range(8)];
-    #rgb6 = [[[0 for i in range(4)] for j in range(4)] for k in range(4)];
-    
+    rb = np.zeros((base, base), dtype=np.float32);
+    rg = np.zeros((base, base), dtype=np.float32);
+    gb = np.zeros((base, base), dtype=np.float32);
+    rgb = np.zeros((base, base, base), dtype=np.float32);
     for i in range(height):
         for j in range(width):
             pixel = img[i, j];
             r = pixel[0];
             g= pixel[1];
             b = pixel[2];
-            r1 = r>>1;
-            g1 = g>>1;
-            b1 = b>>1;
-            r2 = r>>2;
-            g2 = g>>2;
-            b2 = b>>2;
-            r3 = r>>3;
-            g3 = g>>3;
-            b3 = b>>3;
-            r4 = r>>4;
-            g4 = g>>4;
-            b4 = b>>4;
-            r5 = r>>5;
-            g5 = g>>5;
-            b5 = b>>5;
-            r6 = r>>6;
-            g6 = g>>6;
-            b6 = b>>6;
-            
-            rg1[r1][g1]+=1;
-            rb1[r1][b1]+=1;
-            gb1[g1][g1]+=1;
-            
-            rg2[r2][g2]+=1;
-            rb2[r2][b2]+=1;
-            gb2[g2][g2]+=1;
-            
-            rg3[r3][g3]+=1;
-            rb3[r3][b3]+=1;
-            gb3[g3][g3]+=1;
-            
-            rg4[r4][g4]+=1;
-            rb4[r4][b4]+=1;
-            gb4[g4][g4]+=1;
-            
-            rg5[r5][g5]+=1;
-            rb5[r5][b5]+=1;
-            gb5[g5][g5]+=1;
-            
-            rg6[r6][g6]+=1;
-            rb6[r6][b6]+=1;
-            gb6[g6][g6]+=1;
-            
-            rgb1[r1][g1][b1]+=1;
-            rgb2[r2][g2][b2]+=1;
-            rgb3[r3][g3][b3]+=1;
-            rgb4[r4][g4][b4]+=1;            
-            rgb5[r5][g5][b5]+=1;
-            rgb6[r6][g6][b6]+=1;                        
-        
-    rb1 = np.divide(rb1, size);
-    rb1 = np.multiply(rb1, 100);
-    rg1 = np.divide(rg1, size);
-    rg1 = np.multiply(rg1, 100);
-    gb1 = np.divide(gb1, size);
-    gb1 = np.multiply(gb1, 100);
+            r1 = r>>n;
+            g1 = g>>n;
+            b1 = b>>n;
+           
+            rb[r1][b1]+=1;            
+            rg[r1][g1]+=1;
+            gb[g1][g1]+=1;
+            rgb[r1][g1][b1]+=1;
+                        
+    rb = np.divide(rb, size);
+    rb = np.multiply(rb, 100);
+    gb = np.divide(gb, size);
+    gb = np.multiply(gb, 100);
+    rg = np.divide(rg, size);
+    rg = np.multiply(rg, 100);
+    rgb = np.divide(rgb, size);
+    rgb = np.multiply(rgb, 100.0);
     
-    rb2 = np.divide(rb2, size);
-    rb2 = np.multiply(rb2, 100);
-    rg2 = np.divide(rg2, size);
-    rg2 = np.multiply(rg2, 100);
-    gb2 = np.divide(gb2, size);
-    gb2 = np.multiply(gb2, 100);
-    
-    rb3 = np.divide(rb3, size);
-    rb3 = np.multiply(rb3, 100);
-    rg3 = np.divide(rg3, size);
-    rg3 = np.multiply(rg3, 100);
-    gb3 = np.divide(gb3, size);
-    gb3 = np.multiply(gb3, 100);
-    
-    rb4 = np.divide(rb4, size);
-    rb4 = np.multiply(rb4, 100);
-    rg4 = np.divide(rg4, size);
-    rg4 = np.multiply(rg4, 100);
-    gb4 = np.divide(gb4, size);
-    gb4 = np.multiply(gb4, 100);
-    
-    rb5 = np.divide(rb5, size);
-    rb5 = np.multiply(rb5, 100);
-    rg5 = np.divide(rg5, size);
-    rg5 = np.multiply(rg5, 100);
-    gb5 = np.divide(gb5, size);
-    gb5 = np.multiply(gb5, 100);
-    
-    rb6 = np.divide(rb6, size);
-    rb6 = np.multiply(rb6, 100.0);
-    rg6 = np.divide(rg6, size);
-    rg6 = np.multiply(rg6, 100.0);
-    gb6 = np.divide(gb6, size);
-    gb6 = np.multiply(gb6, 100.0);
-    
-    rgb1 = np.divide(rgb1, size);
-    rgb1 = np.multiply(rgb1, 100.0);
-    rgb2 = np.divide(rgb2, size);
-    rgb2 = np.multiply(rgb2, 100.0);
-    rgb3 = np.divide(rgb3, size);
-    rgb3 = np.multiply(rgb3, 100.0);
-    rgb4 = np.divide(rgb4, size);
-    rgb4 = np.multiply(rgb4, 100.0);
-    rgb5 = np.divide(rgb5, size);
-    rgb5 = np.multiply(rgb5, 100.0);
-    rgb6 = np.divide(rgb6, size);
-    rgb6 = np.multiply(rgb6, 100.0);
-    
-    
-    rb = [rb1, rb2, rb3, rb4, rb5, rb6];
-    rg = [rg1, rg2, rg3, rg4, rg5, rg6];
-    gb = [gb1, gb2, gb3, gb4, gb5, gb6];
-    rgb = [rgb1, rgb2, rgb3, rgb4, rgb5, rgb6];
-    
-    print("rg6")
-    print(rg6)
-    print(np.sum(rg6))
-    print("rb6")
-    print(rb6)
-    print(np.sum(rb6))
-    print("gb6")
-    print(gb6)
-    print(np.sum(gb6))
-    print("rgb6")
-    print(rgb6)
-    print(np.sum(rgb6))
-    
-    return rb, rg, gb, rgb;
+    '''
+    print(rb);
+    print(type(rb));
+    print(type(rb[0]));
+    print(type(rb[0][0]));
+    print(len(rb));
+    '''
+    return np.float32(rb), np.float32(rg), np.float32(gb), np.float32(rgb);    
 
 
-        
-calculateRGBColor();
-#calculateGrey();
-#calculateHSV();
-#calculateLAB();
-#calculateLUV();
-
-
+#calculateRGBColor(n=1, isTest=True);
+#traineKNN(channels="GB", numberOfShifts=2);
+#testKNN(channels="RGB", numberOfShifts=4);
+makePlots();
 
 
 
