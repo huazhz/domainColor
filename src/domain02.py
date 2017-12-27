@@ -172,13 +172,7 @@ def calculeHSVHistogram(file):
     img = io.imread(file);
     height, width = len(img), len(img[0]);
     hsvImage = color.rgb2hsv(img);    
-    '''
-    hsvImage[:, :, 0] = exposure.rescale_intensity(hsvImage[:, :, 0], out_range=(0, 359));
-    hsvImage[:, :, 1] = exposure.rescale_intensity(hsvImage[:, :, 1], out_range=(0, 100));
-    hsvImage[:, :, 2] = exposure.rescale_intensity(hsvImage[:, :, 2], out_range=(0, 100));
-    '''        
-    #print(np.amin(hsvImage[:, :, 0]))
-    #print(np.amax(hsvImage[:, :, 0]))
+
     hsvImage[:, :, 0] = exposure.rescale_intensity(hsvImage[:, :, 0],
         in_range=(np.amin(hsvImage[:, :, 0]), np.amax(hsvImage[:, :, 0])), out_range=(0.0, 1.0));
     hsvImage[:, :, 1] = exposure.rescale_intensity(hsvImage[:, :, 1],
