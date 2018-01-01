@@ -13,7 +13,19 @@ qtdDataTrainning = 530;
 qtdDataTestHEE = 223;
 qtdDataTestPAS = 30;
 
-def testSVM(channels, numberOfShifts):
+
+def testAllSVM_SVC():
+    n = [3, 4, 5, 6];
+    
+    for i in n:
+        #testSVM_SVC_RGB("RB", i);
+        #testSVM_SVC_RGB("RG", i);
+        #testSVM_SVC_RGB("GB", i);
+        #testSVM_SVC_RGB("RGB", i);
+        testSVM_SVC_LAB(i);
+
+
+def testSVM_SVC_RGB(channels, numberOfShifts):
     startTime = time.time();                     
     fHEE = "..\\Logs\\3\\Teste\\"+channels+"\\test"+channels+"_"+str(numberOfShifts)+"HistogramColors_H&E.bin";
     fPAS = "..\\Logs\\3\\Teste\\"+channels+"\\test"+channels+"_"+str(numberOfShifts)+"HistogramColors_PAS.bin";
@@ -37,37 +49,25 @@ def testSVM(channels, numberOfShifts):
         y_true[i] = labelHEE;
     for i in range(qtdDataTestPAS):
         data[qtdDataTestHEE+i] = linearize(base, pickle.load(inFPAS), channels);        
-        y_true[qtdDataTestHEE+i] = labelPAS;
-    
+        y_true[qtdDataTestHEE+i] = labelPAS;    
     y_pred[ :qtdDataTestHEE] = svm.predict(data[ :qtdDataTestHEE]);    
-    y_pred[qtdDataTestHEE: ] = svm.predict(data[qtdDataTestHEE: ]);
-    
-    target_names = ['HEE', 'PAS'];
-    
+    y_pred[qtdDataTestHEE: ] = svm.predict(data[qtdDataTestHEE: ]);    
+    target_names = ['HEE', 'PAS'];    
     elapsedTime = time.time() - startTime;
     print(fSVM);
-    print("TIME: ",elapsedTime);
-    
-    print("CLASSIFICATION FOR SVM, \n"+classification_report(y_true, y_pred, target_names=target_names));
-    
-    print("\nCONFUSION MATRIX FOR SVM, (tn, fp, fn, tp)")
+    print("TIME: ",elapsedTime);    
+    print("CLASSIFICATION FOR SVM, \n"+classification_report(y_true, y_pred, target_names=target_names));    
+    #print("\nCONFUSION MATRIX FOR SVM, (tn, fp, fn, tp)")
     print(confusion_matrix(y_true, y_pred).ravel())
     
     inFHEE.close();
     inFPAS.close();
-    fileSVM.close();
-    
+    fileSVM.close();    
     text = classification_report(y_true, y_pred, target_names=target_names);
     text = text.split('    ');
     
-    HEEStatiscs = [text[7], text[8], text[9]];
-    PASStatiscs = [text[13], text[14], text[15]];
-    ALLStatis = [text[18], text[19], text[20]];
-    
-    #return HEEStatiscs, PASStatiscs, ALLStatis;
-    return ALLStatis;
 
-def traineSVM(channels, numberOfShifts):    
+def traineSVM_SVC_RGB(channels, numberOfShifts):    
     fHEE = "..\\Logs\\3\\Treinamento\\"+channels+"\\output"+channels+"_"+str(numberOfShifts)+"HistogramColors_H&E.bin";
     fPAS = "..\\Logs\\3\\Treinamento\\"+channels+"\\output"+channels+"_"+str(numberOfShifts)+"HistogramColors_PAS.bin";
     inFHEE = open(fHEE, 'rb');
@@ -101,45 +101,28 @@ def traineSVM(channels, numberOfShifts):
     pickle.dump(clf, svmFile);        
     svmFile.close();
 
-def makePlots():
-    channels = ["RB", "RG", "GB", "RGB"];
+def makePlots():    
     
     numberOfShifts = [3, 4, 5, 6];    
     dataRB = np.zeros((4,3), dtype=np.float32);
     dataRG = np.zeros((4,3), dtype=np.float32);
     dataGB = np.zeros((4,3), dtype=np.float32);
     dataRGB = np.zeros((4,3), dtype=np.float32);
-    '''
-    numberOfShifts = [5, 6];    
-    dataRB = np.zeros((2,3), dtype=np.float32);
-    dataRG = np.zeros((2,3), dtype=np.float32);
-    dataGB = np.zeros((2,3), dtype=np.float32);
-    dataRGB = np.zeros((2,3), dtype=np.float32);
-    '''
+
     for n in numberOfShifts:
-        '''
-        dataRB[n-5] = testKNN("RB", n);
-        dataRG[n-5] = testKNN("RG", n);
-        dataGB[n-5] = testKNN("GB", n);
-        dataRGB[n-5] = testKNN("RGB", n);
-        '''        
+     
         dataRB[n-3] = testKNN("RB", n);
         dataRG[n-3] = testKNN("RG", n);
         dataGB[n-3] = testKNN("GB", n);
         dataRGB[n-3] = testKNN("RGB", n);
-    '''
-    plotOneByOne("RB", "n of shifts", "proportion of each variable", dataRB);
-    plotOneByOne("RG", "n of shifts", "proportion of each variable", dataRG);
-    plotOneByOne("GB", "n of shifts", "proportion of each variable", dataGB);
-    plotOneByOne("RGB", "n of shifts", "proportion of each variable", dataRGB);
-    '''
+
     plotOneByOne("RB", "n of bins for channel", "proportion of each variable", dataRB);
     plotOneByOne("RG", "n of bins for channel", "proportion of each variable", dataRG);
     plotOneByOne("GB", "n of bins for channel", "proportion of each variable", dataGB);
     plotOneByOne("RGB", "n of bins for channel", "proportion of each variable", dataRGB);
 
 def plotOneByOne(title, xTitle, yTitle, data):
-    fig, ax = plt.subplots();
+    plt.subplots();
     plt.title(title);
     plt.xlabel(xTitle);
     plt.ylabel(yTitle);
@@ -152,11 +135,7 @@ def plotOneByOne(title, xTitle, yTitle, data):
     plt.scatter([32, 16, 8, 4], data[:,0], label= "Precision")
     plt.scatter([32, 16, 8, 4], data[:,1], label= "Recall")
     plt.scatter([32, 16, 8, 4], data[:,2], label= "F1-score")
-    '''
-    plt.plot([3,4,5,6], data[:,0,:], label= "H&E CLASS ");
-    plt.plot([3,4,5,6], data[:,1,:], label= "PAS CLASS");
-    plt.plot([3,4,5,6], data[:,2,:], label= "ALL CLASSES");    
-    '''    
+  
     plt.legend();
     plt.grid(True);            
     plt.show();
@@ -233,13 +212,6 @@ def testKNN(channels, numberOfShifts):
     text = classification_report(y_true, y_pred5, target_names=target_names);
     text = text.split('    ');
     
-    HEEStatiscs = [text[7], text[8], text[9]];
-    PASStatiscs = [text[13], text[14], text[15]];
-    ALLStatis = [text[18], text[19], text[20]];
-    
-    #return HEEStatiscs, PASStatiscs, ALLStatis;
-    return ALLStatis;
-    
         
 def linearize(base, data, channels):
     cont = 0;
@@ -270,10 +242,7 @@ def traineKNN(channels, numberOfShifts):
     base = 256>>numberOfShifts;    
     X = [];
     y = [];
-    '''
-    X = np.zeros((265*2), dtype=np.float32);
-    y = np.zeros((2), dtype=np.int)
-    '''
+
     for i in range(int(qtdDataTrainning/2)):                        
         X.append(pickle.load(inFHEE));
         y.append(labelHEE);
@@ -843,6 +812,78 @@ def calculeHSVColorHistogram(file):
     return h0, h1, h2, h3;
 
 
+def testSVM_SVC_LAB(numberOfShifts):
+    startTime = time.time();                     
+    fHEE = "..\\Logs\\3\\Treinamento\\LAB\\outputAB_"+str(numberOfShifts)+"HistogramColors_H&E.bin";
+    fPAS = "..\\Logs\\3\\Treinamento\\LAB\\outputAB_"+str(numberOfShifts)+"HistogramColors_PAS.bin";
+    fSVM = "..\\trainedSVM_SVC_"+str(numberOfShifts)+"HistogramColors_AB.bin";
+    inFHEE = open(fHEE, 'rb');
+    inFPAS = open(fPAS, 'rb');
+    fileSVM = open(fSVM, 'rb');
+    base = 256>>numberOfShifts;
+
+    svm = pickle.load(fileSVM);               
+        
+    y_true = np.zeros((qtdDataTestHEE + qtdDataTestPAS), dtype=np.int);
+    y_pred = np.zeros((qtdDataTestHEE + qtdDataTestPAS), dtype=np.int);
+        
+    data = np.zeros((qtdDataTestHEE + qtdDataTestPAS, base*base), dtype=np.float32);        
+    
+    for i in range(qtdDataTestHEE):
+        data[i] = pickle.load(inFHEE);
+        y_true[i] = labelHEE;
+    for i in range(qtdDataTestPAS):
+        data[qtdDataTestHEE+i] = pickle.load(inFPAS);
+        y_true[qtdDataTestHEE+i] = labelPAS;
+    y_pred[ :qtdDataTestHEE] = svm.predict(data[ :qtdDataTestHEE]);    
+    y_pred[qtdDataTestHEE: ] = svm.predict(data[qtdDataTestHEE: ]);    
+    target_names = ['HEE', 'PAS'];    
+    elapsedTime = time.time() - startTime;
+    print(fSVM);
+    print("TIME: ",elapsedTime);    
+    print("CLASSIFICATION FOR SVM, \n"+classification_report(y_true, y_pred, target_names=target_names));    
+    #print("\nCONFUSION MATRIX FOR SVM, (tn, fp, fn, tp)")
+    print(confusion_matrix(y_true, y_pred).ravel())    
+    inFHEE.close();
+    inFPAS.close();
+    fileSVM.close();    
+    text = classification_report(y_true, y_pred, target_names=target_names);
+    text = text.split('    ');
+    
+
+def traineSVM_SVC_LAB(numberOfShifts):    
+    fHEE = "..\\Logs\\3\\Treinamento\\LAB\\outputAB_"+str(numberOfShifts)+"HistogramColors_H&E.bin";
+    fPAS = "..\\Logs\\3\\Treinamento\\LAB\\outputAB_"+str(numberOfShifts)+"HistogramColors_PAS.bin";
+    inFHEE = open(fHEE, 'rb');
+    inFPAS = open(fPAS, 'rb');
+    print("Training SVM (C-Support Vector Classification) to channels AB of LAB with "+str(numberOfShifts)+" shifts");
+    
+    X = [];
+    y = [];
+
+    for i in range(int(qtdDataTrainning/2)):
+        X.append(pickle.load(inFHEE));
+        y.append(labelHEE);
+        X.append(pickle.load(inFPAS));
+        y.append(labelPAS);        
+    inFHEE.close();
+    inFPAS.close();
+    
+    X1  = np.array(X);
+    y1 = np.array(y);
+    clf = SVC();
+    kf = KFold(n_splits=10);    
+
+    for k, (train, test) in enumerate(kf.split(X1, y1)):  
+        print("TRAIN:", train, " - TEST:", test);
+        clf.fit(X1[train], y1[train]);        
+        print("K ->",k);        
+        print(clf.score(X1[test], y1[test]));    
+    svmFile = open("..\\trainedSVM_SVC_"+str(numberOfShifts)+"HistogramColors_AB.bin", "wb");
+    print(clf.get_params());        
+    pickle.dump(clf, svmFile);        
+    svmFile.close();
+
 
 #calculateRGBColor(n=1, isTest=True);
 #calculateLABColor(isTest=False);
@@ -853,11 +894,10 @@ def calculeHSVColorHistogram(file):
 #testAllKNNLAB();
 #traineKNNHSV(numberOfShifts=1);
 #traineAllKNNHSV();
-testAllKNNHSV();
+#testAllKNNHSV();
 #makePlots();
-#traineSVM(channels="RG", numberOfShifts=3);
-#testSVM(channels="RG", numberOfShifts=3);
-
-
+#traineSVM_SVC_RGB(channels="RGB", numberOfShifts=3);
+testAllSVM_SVC();
+#traineSVM_SVC_LAB(numberOfShifts=6);
 
 
