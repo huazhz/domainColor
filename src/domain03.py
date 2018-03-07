@@ -835,15 +835,15 @@ def testSVM_SVC_LAB(numberOfShifts):
     for i in range(qtdDataTestPAS):
         data[qtdDataTestHEE+i] = pickle.load(inFPAS);
         y_true[qtdDataTestHEE+i] = labelPAS;
-    y_pred[ :qtdDataTestHEE] = svm.predict(data[ :qtdDataTestHEE]);    
-    y_pred[qtdDataTestHEE: ] = svm.predict(data[qtdDataTestHEE: ]);    
-    target_names = ['HEE', 'PAS'];    
+    y_pred[ :qtdDataTestHEE] = svm.predict(data[ :qtdDataTestHEE]);
+    y_pred[qtdDataTestHEE: ] = svm.predict(data[qtdDataTestHEE: ]);
+    target_names = ['HEE', 'PAS'];
     elapsedTime = time.time() - startTime;
     print(fSVM);
     print("TIME: ",elapsedTime);    
     print("CLASSIFICATION FOR SVM, \n"+classification_report(y_true, y_pred, target_names=target_names));    
     #print("\nCONFUSION MATRIX FOR SVM, (tn, fp, fn, tp)")
-    print(confusion_matrix(y_true, y_pred).ravel())    
+    print(confusion_matrix(y_true, y_pred).ravel());
     inFHEE.close();
     inFPAS.close();
     fileSVM.close();    

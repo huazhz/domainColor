@@ -233,14 +233,13 @@ def defineStaining(f, fSVM, abFile):
     inFile = open(f, "r",newline='');
     reader = csv.reader(inFile);
     
-    fileSVM = open(fSVM, 'rb');    
-    svm = pickle.load(fileSVM);     
-    
+    fileSVM = open(fSVM, 'rb');
+    svm = pickle.load(fileSVM);
+        
     fileAB = open(abFile, 'rb');    
     
-    
     first = True;
-    for row in reader:        
+    for row in reader:
         items = row[0].split(";");
         if(first):
             first = False;            
@@ -252,11 +251,21 @@ def defineStaining(f, fSVM, abFile):
             hAve = float(items[4]);
             hMed = float(items[5]);
             a = pickle.load(fileAB);
-            print(len(a))
-            p = makePrediction(hMed, svm.predict(a));
+            #print(len(a))
+            #print(a)
+            resp = svm.predict( [a] );
+            p = makePrediction(hMed, resp);
+            print(name);
+            print("\t"+p);
+            #time.sleep(10);
             row = name+";"+p;
-            writer.writerow(row);
+            #row = ("%s") % (name+";"+p);
+            writer.writerow([row]);
             
+    outFile.close()
+    inFile.close()
+    fileAB.close()
+    fileSVM.close()
 
 def makePrediction(hMedian, pred):
     boundary = 255;
