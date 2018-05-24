@@ -82,7 +82,7 @@ def calculeLABColorHistogram(file):
     height, width = len(img), len(img[0]);    
     size = height*width;
     labImage = color.rgb2lab(img);        
-    
+    #fazendo a equalização de histograma
     labImage[:, :, 0] = exposure.rescale_intensity(labImage[:, :, 0],
         in_range=(np.amin(labImage[:, :, 0]), np.amax(labImage[:, :, 0])), out_range=(0, 100));
     labImage[:, :, 1] = exposure.rescale_intensity(labImage[:, :, 1],
@@ -174,12 +174,12 @@ def testPams(f):
         
 def testBoundary(f, boundary, type):    
     inFile = open(f, "r",newline='');
-    reader = csv.reader(inFile);    
+    reader = csv.reader(inFile);
     first = True;
     y_true = np.zeros(502, dtype=np.int);
-    y_pred = np.zeros(502, dtype=np.int);  
-    i = 0;    
-    for row in reader:        
+    y_pred = np.zeros(502, dtype=np.int);
+    i = 0;
+    for row in reader:
         items = row[0].split(";");
         if(first):
             first = False;            

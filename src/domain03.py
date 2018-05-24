@@ -35,7 +35,7 @@ def testSVM_SVC_RGB(channels, numberOfShifts):
     fileSVM = open(fSVM, 'rb');
     base = 256>>numberOfShifts;
 
-    svm = pickle.load(fileSVM);               
+    svm = pickle.load(fileSVM);
         
     y_true = np.zeros((qtdDataTestHEE + qtdDataTestPAS), dtype=np.int);
     y_pred = np.zeros((qtdDataTestHEE + qtdDataTestPAS), dtype=np.int);
@@ -50,9 +50,9 @@ def testSVM_SVC_RGB(channels, numberOfShifts):
     for i in range(qtdDataTestPAS):
         data[qtdDataTestHEE+i] = linearize(base, pickle.load(inFPAS), channels);        
         y_true[qtdDataTestHEE+i] = labelPAS;    
-    y_pred[ :qtdDataTestHEE] = svm.predict(data[ :qtdDataTestHEE]);    
-    y_pred[qtdDataTestHEE: ] = svm.predict(data[qtdDataTestHEE: ]);    
-    target_names = ['HEE', 'PAS'];    
+    y_pred[ :qtdDataTestHEE] = svm.predict(data[ :qtdDataTestHEE]);
+    y_pred[qtdDataTestHEE: ] = svm.predict(data[qtdDataTestHEE: ]);
+    target_names = ['HEE', 'PAS'];
     elapsedTime = time.time() - startTime;
     print(fSVM);
     print("TIME: ",elapsedTime);    
